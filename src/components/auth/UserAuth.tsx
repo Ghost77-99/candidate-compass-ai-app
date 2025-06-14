@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -14,7 +13,7 @@ const UserAuth = () => {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [activeTab, setActiveTab] = useState('login');
-  const { login, signup, isLoading, user } = useAuth();
+  const { signIn, signUp, isLoading, user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -27,7 +26,7 @@ const UserAuth = () => {
     e.preventDefault();
     if (!email || !password) return;
 
-    const { error } = await login(email, password);
+    const { error } = await signIn(email, password);
     if (!error) {
       navigate('/dashboard/user');
     }
@@ -37,7 +36,7 @@ const UserAuth = () => {
     e.preventDefault();
     if (!email || !password || !name) return;
 
-    const { error } = await signup(email, password, { name, role: 'user' });
+    const { error } = await signUp(email, password, name, 'user');
     if (!error) {
       // Stay on the same tab but clear the form
       setEmail('');
