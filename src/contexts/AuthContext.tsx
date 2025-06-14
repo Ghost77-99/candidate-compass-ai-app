@@ -192,6 +192,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-// Export createUserProfile for use in auth components
-export { createUserProfile } from './AuthContext';

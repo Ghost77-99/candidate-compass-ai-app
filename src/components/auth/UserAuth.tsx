@@ -7,9 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { User, ArrowLeft, Mail, Phone, UserIcon } from 'lucide-react';
+import { User, ArrowLeft, Phone, UserIcon } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const UserAuth = () => {
   const [phone, setPhone] = useState('');
@@ -63,11 +64,6 @@ const UserAuth = () => {
       });
 
       if (error) throw error;
-
-      // If this is signup, create profile
-      if (activeTab === 'signup' && data.user) {
-        await createUserProfile(data.user, { name, role: 'user' });
-      }
 
       navigate('/dashboard/user');
       toast({
