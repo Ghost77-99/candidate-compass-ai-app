@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,16 +12,37 @@ import { Building2, Users, TrendingUp, Calendar, Search, Eye, Star, LogOut, File
 import { useAuth } from '@/contexts/AuthContext';
 
 const HRDashboard = () => {
-  const { user, logout } = useAuth();
+  const { user, profile, logout, isLoading } = useAuth();
   const navigate = useNavigate();
   const [selectedCandidate, setSelectedCandidate] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
+  useEffect(() => {
+    if (!isLoading && !user) {
+      navigate('/auth/hr');
+    }
+  }, [user, isLoading, navigate]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user || !profile) {
+    return null;
+  }
+
   const handleLogout = () => {
     logout();
-    navigate('/');
   };
 
+  // Mock data for demonstration - will be replaced with real data later
   const mockCandidates = [
     {
       id: '1',
@@ -150,12 +171,12 @@ const HRDashboard = () => {
               <div className="flex items-center space-x-3">
                 <Avatar>
                   <AvatarFallback className="bg-purple-100 text-purple-600">
-                    {user?.name?.split(' ').map(n => n[0]).join('')}
+                    {profile.name?.split(' ').map(n => n[0]).join('')}
                   </AvatarFallback>
                 </Avatar>
                 <div className="hidden sm:block">
-                  <p className="font-medium text-gray-900">{user?.name}</p>
-                  <p className="text-sm text-gray-600">{user?.profile?.company}</p>
+                  <p className="font-medium text-gray-900">{profile.name}</p>
+                  <p className="text-sm text-gray-600">{profile.department || 'HR Department'}</p>
                 </div>
               </div>
               <Button variant="ghost" onClick={handleLogout}>

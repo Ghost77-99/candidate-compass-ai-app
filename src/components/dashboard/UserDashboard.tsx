@@ -1,5 +1,6 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,9 +10,31 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Calendar, Clock, FileText, User, Briefcase, CheckCircle } from 'lucide-react';
 
 const UserDashboard = () => {
-  const { user, logout } = useAuth();
+  const { user, profile, logout, isLoading } = useAuth();
+  const navigate = useNavigate();
 
-  // Mock data for demonstration
+  useEffect(() => {
+    if (!isLoading && !user) {
+      navigate('/auth/user');
+    }
+  }, [user, isLoading, navigate]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user || !profile) {
+    return null;
+  }
+
+  // Mock data for demonstration - will be replaced with real data later
   const jobOpenings = [
     {
       id: 1,
@@ -97,14 +120,14 @@ const UserDashboard = () => {
             </div>
             <div className="flex items-center space-x-4">
               <Avatar>
-                <AvatarImage src="" alt={user?.name} />
+                <AvatarImage src={profile.profile_image_url || ""} alt={profile.name} />
                 <AvatarFallback className="bg-blue-100 text-blue-600">
-                  {user?.name?.charAt(0) || 'U'}
+                  {profile.name?.charAt(0) || 'U'}
                 </AvatarFallback>
               </Avatar>
               <div className="hidden md:block">
-                <p className="text-sm font-medium text-gray-900">{user?.name}</p>
-                <p className="text-sm text-gray-500">{user?.email}</p>
+                <p className="text-sm font-medium text-gray-900">{profile.name}</p>
+                <p className="text-sm text-gray-500">{profile.email}</p>
               </div>
               <Button onClick={logout} variant="outline" size="sm">
                 Logout
@@ -117,7 +140,7 @@ const UserDashboard = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome back, {user?.name}!</h2>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome back, {profile.name}!</h2>
           <p className="text-gray-600">Track your applications and discover new opportunities.</p>
         </div>
 
@@ -137,18 +160,24 @@ const UserDashboard = () => {
                   <div>
                     <h4 className="font-medium text-gray-900 mb-2">Skills</h4>
                     <div className="flex flex-wrap gap-2">
-                      {user?.profile?.skills?.map((skill: string, index: number) => (
-                        <Badge key={index} variant="secondary">{skill}</Badge>
-                      ))}
+                      {profile.skills?.length ? (
+                        profile.skills.map((skill: string, index: number) => (
+                          <Badge key={index} variant="secondary">{skill}</Badge>
+                        ))
+                      ) : (
+                        <p className="text-gray-500 text-sm">No skills added yet</p>
+                      )}
                     </div>
                   </div>
                   <div>
                     <h4 className="font-medium text-gray-900 mb-2">Experience</h4>
-                    <p className="text-gray-600">{user?.profile?.experience}</p>
+                    <p className="text-gray-600">
+                      {profile.experience_years ? `${profile.experience_years} years` : 'Not specified'}
+                    </p>
                   </div>
                   <div className="md:col-span-2">
                     <h4 className="font-medium text-gray-900 mb-2">Location</h4>
-                    <p className="text-gray-600">{user?.profile?.location}</p>
+                    <p className="text-gray-600">{profile.location || 'Not specified'}</p>
                   </div>
                 </div>
                 <Button className="mt-4" variant="outline">

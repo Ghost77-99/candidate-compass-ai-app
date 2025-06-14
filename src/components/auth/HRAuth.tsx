@@ -5,53 +5,41 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Building2, ArrowLeft, Mail } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Building2, ArrowLeft, Mail, Lock, UserIcon } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
 
 const HRAuth = () => {
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
-  const [step, setStep] = useState<'email' | 'otp'>('email');
-  const { login, isLoading, user } = useAuth();
-  const { toast } = useToast();
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [activeTab, setActiveTab] = useState('login');
+  const { login, signup, isLoading, user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user && user.role === 'hr') {
+    if (user) {
       navigate('/dashboard/hr');
     }
   }, [user, navigate]);
 
-  const handleSendOTP = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
+    if (!email || !password) return;
 
-    // Simulate sending OTP
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setStep('otp');
-    toast({
-      title: "OTP Sent!",
-      description: "Check your email for the verification code.",
-    });
+    const { error } = await login(email, password);
+    if (!error) {
+      navigate('/dashboard/hr');
+    }
   };
 
-  const handleVerifyOTP = async (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!otp) return;
+    if (!email || !password || !name) return;
 
-    try {
-      await login(email, 'hr');
-      toast({
-        title: "Welcome!",
-        description: "Successfully logged in to HR dashboard.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to verify OTP. Please try again.",
-        variant: "destructive",
-      });
+    const { error } = await signup(email, password, { name, role: 'hr' });
+    if (!error) {
+      setActiveTab('login');
     }
   };
 
@@ -74,68 +62,116 @@ const HRAuth = () => {
             </div>
             <CardTitle className="text-2xl text-purple-600">HR Portal</CardTitle>
             <CardDescription>
-              {step === 'email' 
-                ? 'Enter your email to receive a verification code'
-                : 'Enter the verification code sent to your email'
-              }
+              Access the HR management dashboard to manage candidates and jobs
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {step === 'email' ? (
-              <form onSubmit={handleSendOTP} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="hr@company.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="h-12"
-                  />
-                </div>
-                <Button
-                  type="submit"
-                  className="w-full bg-purple-600 hover:bg-purple-700 h-12 text-lg"
-                  disabled={!email}
-                >
-                  <Mail className="w-5 h-5 mr-2" />
-                  Send Verification Code
-                </Button>
-              </form>
-            ) : (
-              <form onSubmit={handleVerifyOTP} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="otp">Verification Code</Label>
-                  <Input
-                    id="otp"
-                    type="text"
-                    placeholder="Enter 6-digit code"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
-                    required
-                    className="h-12 text-center text-lg tracking-widest"
-                    maxLength={6}
-                  />
-                </div>
-                <Button
-                  type="submit"
-                  className="w-full bg-purple-600 hover:bg-purple-700 h-12 text-lg"
-                  disabled={!otp || isLoading}
-                >
-                  {isLoading ? 'Verifying...' : 'Verify & Sign In'}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setStep('email')}
-                  className="w-full"
-                >
-                  Use different email
-                </Button>
-              </form>
-            )}
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="login">Sign In</TabsTrigger>
+                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="login">
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="login-email">Email</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="login-email"
+                        type="email"
+                        placeholder="hr@company.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        className="pl-10 h-12"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="login-password">Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="login-password"
+                        type="password"
+                        placeholder="Enter your password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        className="pl-10 h-12"
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    type="submit"
+                    className="w-full bg-purple-600 hover:bg-purple-700 h-12 text-lg"
+                    disabled={!email || !password || isLoading}
+                  >
+                    {isLoading ? 'Signing In...' : 'Sign In'}
+                  </Button>
+                </form>
+              </TabsContent>
+              
+              <TabsContent value="signup">
+                <form onSubmit={handleSignup} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-name">Full Name</Label>
+                    <div className="relative">
+                      <UserIcon className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="signup-name"
+                        type="text"
+                        placeholder="HR Manager"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        required
+                        className="pl-10 h-12"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-email">Email</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="signup-email"
+                        type="email"
+                        placeholder="hr@company.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        className="pl-10 h-12"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-password">Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="signup-password"
+                        type="password"
+                        placeholder="Create a password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        className="pl-10 h-12"
+                        minLength={6}
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    type="submit"
+                    className="w-full bg-purple-600 hover:bg-purple-700 h-12 text-lg"
+                    disabled={!email || !password || !name || isLoading}
+                  >
+                    {isLoading ? 'Creating Account...' : 'Create HR Account'}
+                  </Button>
+                </form>
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       </div>
