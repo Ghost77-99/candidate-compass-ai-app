@@ -29,13 +29,14 @@ const HRAuth = () => {
     }
   }, [user, navigate]);
 
-  const sendOtp = async (emailAddress: string) => {
+  const sendOtp = async (emailAddress: string, isSignUp: boolean = false) => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithOtp({
         email: emailAddress,
         options: {
-          shouldCreateUser: activeTab === 'signup'
+          shouldCreateUser: isSignUp,
+          data: isSignUp ? { name, role: 'hr' } : undefined
         }
       });
 
@@ -44,7 +45,7 @@ const HRAuth = () => {
       setIsOtpSent(true);
       toast({
         title: "OTP Sent",
-        description: "Please check your email for the verification code.",
+        description: "Please check your email for the 6-digit verification code.",
       });
     } catch (error: any) {
       toast({
@@ -68,11 +69,12 @@ const HRAuth = () => {
 
       if (error) throw error;
 
-      navigate('/dashboard/hr');
       toast({
         title: "Success",
         description: "Successfully authenticated!",
       });
+      
+      // Navigation will be handled by the auth context
     } catch (error: any) {
       toast({
         title: "Error",
@@ -89,7 +91,7 @@ const HRAuth = () => {
     if (!email) return;
 
     if (!isOtpSent) {
-      await sendOtp(email);
+      await sendOtp(email, false);
     } else if (otp.length === 6) {
       await verifyOtp(email, otp);
     }
@@ -100,7 +102,7 @@ const HRAuth = () => {
     if (!email || !name) return;
 
     if (!isOtpSent) {
-      await sendOtp(email);
+      await sendOtp(email, true);
     } else if (otp.length === 6) {
       await verifyOtp(email, otp);
     }
