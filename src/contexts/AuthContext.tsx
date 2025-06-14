@@ -39,35 +39,39 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const { toast } = useToast();
 
   useEffect(() => {
+    // Get initial session
+    const getInitialSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        await fetchUserProfile(session.user.id);
+      }
+      setIsLoading(false);
+    };
+
+    getInitialSession();
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth event:', event, session);
         setSession(session);
         setUser(session?.user ?? null);
         
-        if (session?.user) {
-          // Fetch user profile when authenticated
+        if (event === 'SIGNED_IN' && session?.user) {
+          // Fetch user profile when user signs in
           setTimeout(async () => {
             await fetchUserProfile(session.user.id);
           }, 0);
-        } else {
+        } else if (event === 'SIGNED_OUT') {
           setProfile(null);
         }
         
         setIsLoading(false);
       }
     );
-
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        fetchUserProfile(session.user.id);
-      }
-      setIsLoading(false);
-    });
 
     return () => subscription.unsubscribe();
   }, []);
@@ -101,70 +105,104 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
+      if (error) {
+        let errorMessage = error.message;
+        
+        // Provide more user-friendly error messages
+        if (error.message.includes('Invalid login credentials')) {
+          errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+        } else if (error.message.includes('Email not confirmed')) {
+          errorMessage = 'Please check your email and click the confirmation link before signing in.';
+        }
+        
+        toast({
+          title: "Login Failed",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return { error };
+      }
+
+      if (data.user) {
+        toast({
+          title: "Success",
+          description: "Successfully signed in!",
+        });
+      }
+
+      return { error: null };
+    } catch (err) {
+      console.error('Login error:', err);
       toast({
         title: "Login Failed",
-        description: error.message,
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
       setIsLoading(false);
-      return { error };
+      return { error: err };
     }
-
-    return { error: null };
   };
 
   const signup = async (email: string, password: string, userData?: { name?: string; role?: 'user' | 'hr' }) => {
     setIsLoading(true);
     
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          name: userData?.name || email.split('@')[0],
-          role: userData?.role || 'user'
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            name: userData?.name || email.split('@')[0],
+            role: userData?.role || 'user'
+          }
         }
-      }
-    });
+      });
 
-    if (error) {
+      if (error) {
+        let errorMessage = error.message;
+        
+        // Provide more user-friendly error messages
+        if (error.message.includes('User already registered')) {
+          errorMessage = 'An account with this email already exists. Please try signing in instead.';
+        }
+        
+        toast({
+          title: "Signup Failed",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return { error };
+      }
+
+      // If user was created successfully
+      if (data.user) {
+        toast({
+          title: "Account Created",
+          description: "Please check your email to verify your account before signing in.",
+        });
+      }
+
+      setIsLoading(false);
+      return { error: null };
+    } catch (err) {
+      console.error('Signup error:', err);
       toast({
         title: "Signup Failed",
-        description: error.message,
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
       setIsLoading(false);
-      return { error };
+      return { error: err };
     }
-
-    // Update profile with role after signup
-    if (data.user && userData?.role) {
-      try {
-        await supabase
-          .from('profiles')
-          .update({ role: userData.role })
-          .eq('id', data.user.id);
-      } catch (updateError) {
-        console.error('Error updating profile role:', updateError);
-      }
-    }
-
-    toast({
-      title: "Account Created",
-      description: "Please check your email to verify your account.",
-    });
-
-    setIsLoading(false);
-    return { error: null };
   };
 
   const logout = async () => {
@@ -174,6 +212,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         title: "Logout Failed",
         description: error.message,
         variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Successfully signed out!",
       });
     }
   };

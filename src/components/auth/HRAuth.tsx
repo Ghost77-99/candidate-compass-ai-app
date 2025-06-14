@@ -39,6 +39,10 @@ const HRAuth = () => {
 
     const { error } = await signup(email, password, { name, role: 'hr' });
     if (!error) {
+      // Stay on the same tab but clear the form
+      setEmail('');
+      setPassword('');
+      setName('');
       setActiveTab('login');
     }
   };
@@ -86,6 +90,7 @@ const HRAuth = () => {
                         onChange={(e) => setEmail(e.target.value)}
                         required
                         className="pl-10 h-12"
+                        disabled={isLoading}
                       />
                     </div>
                   </div>
@@ -101,6 +106,7 @@ const HRAuth = () => {
                         onChange={(e) => setPassword(e.target.value)}
                         required
                         className="pl-10 h-12"
+                        disabled={isLoading}
                       />
                     </div>
                   </div>
@@ -128,6 +134,7 @@ const HRAuth = () => {
                         onChange={(e) => setName(e.target.value)}
                         required
                         className="pl-10 h-12"
+                        disabled={isLoading}
                       />
                     </div>
                   </div>
@@ -143,6 +150,7 @@ const HRAuth = () => {
                         onChange={(e) => setEmail(e.target.value)}
                         required
                         className="pl-10 h-12"
+                        disabled={isLoading}
                       />
                     </div>
                   </div>
@@ -159,6 +167,7 @@ const HRAuth = () => {
                         required
                         className="pl-10 h-12"
                         minLength={6}
+                        disabled={isLoading}
                       />
                     </div>
                   </div>
