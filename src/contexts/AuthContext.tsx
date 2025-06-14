@@ -86,7 +86,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       if (data) {
-        setProfile(data);
+        // Ensure the role is properly typed and provide a default if needed
+        const profileData: Profile = {
+          ...data,
+          role: (data.role as 'user' | 'hr' | 'admin') || 'user'
+        };
+        setProfile(profileData);
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
