@@ -7,13 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { Building2, ArrowLeft, Phone, UserIcon } from 'lucide-react';
+import { Building2, ArrowLeft, Mail, UserIcon } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 const HRAuth = () => {
-  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [name, setName] = useState('');
   const [activeTab, setActiveTab] = useState('login');
@@ -29,11 +29,14 @@ const HRAuth = () => {
     }
   }, [user, navigate]);
 
-  const sendOtp = async (phoneNumber: string) => {
+  const sendOtp = async (emailAddress: string) => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithOtp({
-        phone: phoneNumber
+        email: emailAddress,
+        options: {
+          shouldCreateUser: activeTab === 'signup'
+        }
       });
 
       if (error) throw error;
@@ -41,7 +44,7 @@ const HRAuth = () => {
       setIsOtpSent(true);
       toast({
         title: "OTP Sent",
-        description: "Please check your phone for the verification code.",
+        description: "Please check your email for the verification code.",
       });
     } catch (error: any) {
       toast({
@@ -54,13 +57,13 @@ const HRAuth = () => {
     }
   };
 
-  const verifyOtp = async (phoneNumber: string, otpCode: string) => {
+  const verifyOtp = async (emailAddress: string, otpCode: string) => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase.auth.verifyOtp({
-        phone: phoneNumber,
+        email: emailAddress,
         token: otpCode,
-        type: 'sms'
+        type: 'email'
       });
 
       if (error) throw error;
@@ -83,28 +86,28 @@ const HRAuth = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phone) return;
+    if (!email) return;
 
     if (!isOtpSent) {
-      await sendOtp(phone);
+      await sendOtp(email);
     } else if (otp.length === 6) {
-      await verifyOtp(phone, otp);
+      await verifyOtp(email, otp);
     }
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phone || !name) return;
+    if (!email || !name) return;
 
     if (!isOtpSent) {
-      await sendOtp(phone);
+      await sendOtp(email);
     } else if (otp.length === 6) {
-      await verifyOtp(phone, otp);
+      await verifyOtp(email, otp);
     }
   };
 
   const resetForm = () => {
-    setPhone('');
+    setEmail('');
     setOtp('');
     setName('');
     setIsOtpSent(false);
@@ -148,15 +151,15 @@ const HRAuth = () => {
                 <form onSubmit={handleLogin} className="space-y-4">
                   {!isOtpSent ? (
                     <div className="space-y-2">
-                      <Label htmlFor="login-phone">Phone Number</Label>
+                      <Label htmlFor="login-email">Email Address</Label>
                       <div className="relative">
-                        <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                        <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                         <Input
-                          id="login-phone"
-                          type="tel"
-                          placeholder="+1234567890"
-                          value={phone}
-                          onChange={(e) => setPhone(e.target.value)}
+                          id="login-email"
+                          type="email"
+                          placeholder="hr@company.com"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
                           required
                           className="pl-10 h-12"
                           disabled={isLoading}
@@ -167,7 +170,7 @@ const HRAuth = () => {
                     <div className="space-y-4">
                       <div className="text-center">
                         <p className="text-sm text-gray-600 mb-4">
-                          Enter the 6-digit code sent to {phone}
+                          Enter the 6-digit code sent to {email}
                         </p>
                         <div className="flex justify-center">
                           <InputOTP value={otp} onChange={setOtp} maxLength={6}>
@@ -189,14 +192,14 @@ const HRAuth = () => {
                         className="w-full"
                         disabled={isLoading}
                       >
-                        Change Phone Number
+                        Change Email Address
                       </Button>
                     </div>
                   )}
                   <Button
                     type="submit"
                     className="w-full bg-purple-600 hover:bg-purple-700 h-12 text-lg"
-                    disabled={(!phone && !isOtpSent) || (isOtpSent && otp.length !== 6) || isLoading}
+                    disabled={(!email && !isOtpSent) || (isOtpSent && otp.length !== 6) || isLoading}
                   >
                     {isLoading ? 'Processing...' : isOtpSent ? 'Verify OTP' : 'Send OTP'}
                   </Button>
@@ -224,15 +227,15 @@ const HRAuth = () => {
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="signup-phone">Phone Number</Label>
+                        <Label htmlFor="signup-email">Email Address</Label>
                         <div className="relative">
-                          <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                          <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                           <Input
-                            id="signup-phone"
-                            type="tel"
-                            placeholder="+1234567890"
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
+                            id="signup-email"
+                            type="email"
+                            placeholder="hr@company.com"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
                             required
                             className="pl-10 h-12"
                             disabled={isLoading}
@@ -244,7 +247,7 @@ const HRAuth = () => {
                     <div className="space-y-4">
                       <div className="text-center">
                         <p className="text-sm text-gray-600 mb-4">
-                          Enter the 6-digit code sent to {phone}
+                          Enter the 6-digit code sent to {email}
                         </p>
                         <div className="flex justify-center">
                           <InputOTP value={otp} onChange={setOtp} maxLength={6}>
@@ -273,7 +276,7 @@ const HRAuth = () => {
                   <Button
                     type="submit"
                     className="w-full bg-purple-600 hover:bg-purple-700 h-12 text-lg"
-                    disabled={(!phone || !name) && !isOtpSent || (isOtpSent && otp.length !== 6) || isLoading}
+                    disabled={(!email || !name) && !isOtpSent || (isOtpSent && otp.length !== 6) || isLoading}
                   >
                     {isLoading ? 'Processing...' : isOtpSent ? 'Create HR Account' : 'Send OTP'}
                   </Button>
