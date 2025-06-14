@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -32,11 +31,14 @@ const UserAuth = () => {
   const sendOtp = async (emailAddress: string, isSignUp: boolean = false) => {
     setIsLoading(true);
     try {
+      // Use signInWithOtp but specify we want OTP codes
       const { data, error } = await supabase.auth.signInWithOtp({
         email: emailAddress,
         options: {
           shouldCreateUser: isSignUp,
-          data: isSignUp ? { name } : undefined
+          data: isSignUp ? { name } : undefined,
+          // This tells Supabase we want OTP codes, not magic links
+          emailRedirectTo: undefined
         }
       });
 
@@ -45,7 +47,7 @@ const UserAuth = () => {
       setIsOtpSent(true);
       toast({
         title: "OTP Sent",
-        description: "Please check your email for the 6-digit verification code.",
+        description: "Please check your email for the 6-digit verification code. Note: If you receive a magic link instead, please check your Supabase project settings.",
       });
     } catch (error: any) {
       toast({
