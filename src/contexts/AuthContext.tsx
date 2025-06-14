@@ -7,9 +7,9 @@ interface Profile {
   id: string;
   name: string | null;
   email: string | null;
+  phone: string | null;
   role: string | null;
   department: string | null;
-  phone: string | null;
   location: string | null;
   bio: string | null;
   skills: string[] | null;
@@ -25,8 +25,6 @@ interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   isLoading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, name: string, role: string) => Promise<{ error: any }>;
   logout: () => Promise<void>;
 }
 
@@ -93,13 +91,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const profileData = {
         id: user.id,
         email: user.email,
-        name: additionalData?.name || user.user_metadata?.name || user.email?.split('@')[0] || 'User',
+        phone: user.phone,
+        name: additionalData?.name || user.user_metadata?.name || 'User',
         role: additionalData?.role || 'user',
         bio: randomBio,
         skills: randomSkillSet,
         location: randomLocation,
         experience_years: randomExperience,
-        phone: `+1 (555) ${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 9000) + 1000}`,
         department: additionalData?.role === 'hr' ? 'Human Resources' : 'Engineering'
       };
 
@@ -152,7 +150,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initializeAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event, session?.user?.email);
+      console.log('Auth state changed:', event, session?.user?.phone);
       
       if (session?.user) {
         setUser(session.user);
@@ -169,35 +167,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error };
-  };
-
-  const signUp = async (email: string, password: string, name: string, role: string = 'user') => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          name,
-          role
-        }
-      }
-    });
-
-    if (data.user && !error) {
-      // Create profile immediately after signup
-      try {
-        await createUserProfile(data.user, { name, role });
-      } catch (profileError) {
-        console.error('Error creating profile during signup:', profileError);
-      }
-    }
-
-    return { error };
-  };
-
   const logout = async () => {
     await supabase.auth.signOut();
     setUser(null);
@@ -209,8 +178,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       user,
       profile,
       isLoading,
-      signIn,
-      signUp,
       logout
     }}>
       {children}
@@ -225,3 +192,6 @@ export const useAuth = () => {
   }
   return context;
 };
+
+// Export createUserProfile for use in auth components
+export { createUserProfile } from './AuthContext';
