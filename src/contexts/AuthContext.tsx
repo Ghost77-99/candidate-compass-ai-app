@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -46,7 +45,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        await fetchUserProfile(session.user.id);
+        await fetchOrCreateUserProfile(session.user);
       }
       setIsLoading(false);
     };
@@ -61,9 +60,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(session?.user ?? null);
         
         if (event === 'SIGNED_IN' && session?.user) {
-          // Fetch user profile when user signs in
+          // Fetch or create user profile when user signs in
           setTimeout(async () => {
-            await fetchUserProfile(session.user.id);
+            await fetchOrCreateUserProfile(session.user);
           }, 0);
         } else if (event === 'SIGNED_OUT') {
           setProfile(null);
@@ -76,29 +75,85 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => subscription.unsubscribe();
   }, []);
 
-  const fetchUserProfile = async (userId: string) => {
+  const createUserProfile = async (user: User, role: 'user' | 'hr' = 'user') => {
     try {
+      const profileData = {
+        id: user.id,
+        email: user.email || '',
+        name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
+        role: role,
+        experience_years: 0,
+        skills: []
+      };
+
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
-        .eq('id', userId)
+        .insert([profileData])
+        .select()
         .single();
 
       if (error) {
+        console.error('Error creating profile:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error creating profile:', error);
+      return null;
+    }
+  };
+
+  const fetchOrCreateUserProfile = async (user: User) => {
+    try {
+      // First, try to fetch existing profile
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') {
         console.error('Error fetching profile:', error);
         return;
       }
 
       if (data) {
-        // Ensure the role is properly typed and provide a default if needed
+        // Profile exists, set it
         const profileData: Profile = {
           ...data,
           role: (data.role as 'user' | 'hr' | 'admin') || 'user'
         };
         setProfile(profileData);
+      } else {
+        // Profile doesn't exist, create one
+        console.log('Profile not found, creating new profile for user:', user.id);
+        
+        // Determine role from user metadata or default to 'user'
+        const userRole = user.user_metadata?.role || 'user';
+        
+        const newProfile = await createUserProfile(user, userRole);
+        if (newProfile) {
+          const profileData: Profile = {
+            ...newProfile,
+            role: (newProfile.role as 'user' | 'hr' | 'admin') || 'user'
+          };
+          setProfile(profileData);
+          
+          toast({
+            title: "Welcome!",
+            description: "Your profile has been created successfully.",
+          });
+        } else {
+          toast({
+            title: "Profile Error",
+            description: "There was an issue setting up your profile. Please try refreshing the page.",
+            variant: "destructive",
+          });
+        }
       }
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      console.error('Error in fetchOrCreateUserProfile:', error);
     }
   };
 
