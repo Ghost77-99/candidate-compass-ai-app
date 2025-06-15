@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -113,10 +112,10 @@ const JobBrowser = () => {
   const formatSalary = (min?: number, max?: number) => {
     if (!min && !max) return 'Salary not specified';
     if (min && max) {
-      return `$${(min / 1000).toFixed(0)}k - $${(max / 1000).toFixed(0)}k`;
+      return `₹${(min / 1000).toFixed(0)}k - ₹${(max / 1000).toFixed(0)}k`;
     }
-    if (min) return `$${(min / 1000).toFixed(0)}k+`;
-    return `Up to $${(max! / 1000).toFixed(0)}k`;
+    if (min) return `₹${(min / 1000).toFixed(0)}k+`;
+    return `Up to ₹${(max! / 1000).toFixed(0)}k`;
   };
 
   const formatJobType = (type: string) => {
