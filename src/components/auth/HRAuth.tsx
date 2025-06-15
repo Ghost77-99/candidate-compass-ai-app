@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -6,18 +7,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { Building2, ArrowLeft, Mail, UserIcon } from 'lucide-react';
+import { Building2, ArrowLeft, Mail, UserIcon, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 const HRAuth = () => {
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
+  const [otp, setOtp] = useState('');
   const [activeTab, setActiveTab] = useState('login');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isPasswordReset, setIsPasswordReset] = useState(false);
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -28,18 +36,101 @@ const HRAuth = () => {
     }
   }, [user, navigate]);
 
-  const sendOtp = async (emailAddress: string, isSignUp: boolean = false) => {
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) return;
+
     setIsLoading(true);
     try {
-      // Use signInWithOtp but specify we want OTP codes
-      const { data, error } = await supabase.auth.signInWithOtp({
-        email: emailAddress,
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Successfully logged in!",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Login Failed",
+        description: error.message || "Invalid email or password",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password || !name || !confirmPassword) return;
+
+    if (password !== confirmPassword) {
+      toast({
+        title: "Error",
+        description: "Passwords don't match",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (password.length < 6) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 6 characters long",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
         options: {
-          shouldCreateUser: isSignUp,
-          data: isSignUp ? { name, role: 'hr' } : undefined,
-          // This tells Supabase we want OTP codes, not magic links
-          emailRedirectTo: undefined
+          data: {
+            name: name,
+            role: 'hr'
+          }
         }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "HR account created successfully! Please check your email for verification.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Signup Failed",
+        description: error.message || "Failed to create account",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const sendPasswordResetOtp = async () => {
+    if (!email) {
+      toast({
+        title: "Error",
+        description: "Please enter your email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Call our custom function to generate OTP
+      const { data, error } = await supabase.rpc('generate_password_reset_otp', {
+        user_email: email
       });
 
       if (error) throw error;
@@ -47,7 +138,7 @@ const HRAuth = () => {
       setIsOtpSent(true);
       toast({
         title: "OTP Sent",
-        description: "Please check your email for the 6-digit verification code. Note: If you receive a magic link instead, please check your Supabase project settings.",
+        description: "Please check your email for the 6-digit verification code.",
       });
     } catch (error: any) {
       toast({
@@ -60,27 +151,61 @@ const HRAuth = () => {
     }
   };
 
-  const verifyOtp = async (emailAddress: string, otpCode: string) => {
+  const verifyOtpAndResetPassword = async () => {
+    if (!otp || !newPassword) {
+      toast({
+        title: "Error",
+        description: "Please enter both OTP and new password",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 6 characters long",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        email: emailAddress,
-        token: otpCode,
-        type: 'email'
+      // Verify OTP first
+      const { data: verifyData, error: verifyError } = await supabase.rpc('verify_password_reset_otp', {
+        user_email: email,
+        provided_otp: otp
       });
 
-      if (error) throw error;
+      if (verifyError) throw verifyError;
+
+      if (!verifyData?.[0]?.success) {
+        throw new Error(verifyData?.[0]?.message || 'Invalid OTP');
+      }
+
+      // If OTP is valid, reset password using Supabase auth
+      const { error: resetError } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (resetError) throw resetError;
 
       toast({
         title: "Success",
-        description: "Successfully authenticated!",
+        description: "Password reset successfully! You can now login with your new password.",
       });
-      
-      // Navigation will be handled by the auth context
+
+      // Reset form
+      setIsPasswordReset(false);
+      setIsOtpSent(false);
+      setOtp('');
+      setNewPassword('');
+      setActiveTab('login');
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Invalid OTP",
+        description: error.message || "Failed to reset password",
         variant: "destructive",
       });
     } finally {
@@ -88,32 +213,14 @@ const HRAuth = () => {
     }
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) return;
-
-    if (!isOtpSent) {
-      await sendOtp(email, false);
-    } else if (otp.length === 6) {
-      await verifyOtp(email, otp);
-    }
-  };
-
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !name) return;
-
-    if (!isOtpSent) {
-      await sendOtp(email, true);
-    } else if (otp.length === 6) {
-      await verifyOtp(email, otp);
-    }
-  };
-
   const resetForm = () => {
     setEmail('');
-    setOtp('');
+    setPassword('');
+    setConfirmPassword('');
     setName('');
+    setOtp('');
+    setNewPassword('');
+    setIsPasswordReset(false);
     setIsOtpSent(false);
   };
 
@@ -141,19 +248,19 @@ const HRAuth = () => {
             </div>
             <CardTitle className="text-2xl text-purple-600">HR Portal</CardTitle>
             <CardDescription>
-              Access the HR management dashboard with secure OTP authentication
+              Access the HR management dashboard with secure authentication
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs value={activeTab} onValueChange={handleTabChange}>
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">Sign In</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="login">
-                <form onSubmit={handleLogin} className="space-y-4">
-                  {!isOtpSent ? (
+            {!isPasswordReset ? (
+              <Tabs value={activeTab} onValueChange={handleTabChange}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="login">Sign In</TabsTrigger>
+                  <TabsTrigger value="signup">Sign Up</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="login">
+                  <form onSubmit={handleLogin} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="login-email">Email Address</Label>
                       <div className="relative">
@@ -170,123 +277,237 @@ const HRAuth = () => {
                         />
                       </div>
                     </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="text-center">
-                        <p className="text-sm text-gray-600 mb-4">
-                          Enter the 6-digit code sent to {email}
-                        </p>
-                        <div className="flex justify-center">
-                          <InputOTP value={otp} onChange={setOtp} maxLength={6}>
-                            <InputOTPGroup>
-                              <InputOTPSlot index={0} />
-                              <InputOTPSlot index={1} />
-                              <InputOTPSlot index={2} />
-                              <InputOTPSlot index={3} />
-                              <InputOTPSlot index={4} />
-                              <InputOTPSlot index={5} />
-                            </InputOTPGroup>
-                          </InputOTP>
-                        </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="login-password">Password</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                        <Input
+                          id="login-password"
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Enter your password"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          required
+                          className="pl-10 pr-10 h-12"
+                          disabled={isLoading}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
                       </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={resetForm}
-                        className="w-full"
-                        disabled={isLoading}
-                      >
-                        Change Email Address
-                      </Button>
                     </div>
-                  )}
-                  <Button
-                    type="submit"
-                    className="w-full bg-purple-600 hover:bg-purple-700 h-12 text-lg"
-                    disabled={(!email && !isOtpSent) || (isOtpSent && otp.length !== 6) || isLoading}
-                  >
-                    {isLoading ? 'Processing...' : isOtpSent ? 'Verify OTP' : 'Send OTP'}
-                  </Button>
-                </form>
-              </TabsContent>
-              
-              <TabsContent value="signup">
-                <form onSubmit={handleSignup} className="space-y-4">
-                  {!isOtpSent ? (
-                    <>
-                      <div className="space-y-2">
-                        <Label htmlFor="signup-name">Full Name</Label>
-                        <div className="relative">
-                          <UserIcon className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                          <Input
-                            id="signup-name"
-                            type="text"
-                            placeholder="HR Manager"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            required
-                            className="pl-10 h-12"
-                            disabled={isLoading}
-                          />
-                        </div>
+                    <Button
+                      type="submit"
+                      className="w-full bg-purple-600 hover:bg-purple-700 h-12 text-lg"
+                      disabled={!email || !password || isLoading}
+                    >
+                      {isLoading ? 'Signing In...' : 'Sign In'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setIsPasswordReset(true)}
+                      className="w-full"
+                      disabled={isLoading}
+                    >
+                      Forgot Password?
+                    </Button>
+                  </form>
+                </TabsContent>
+                
+                <TabsContent value="signup">
+                  <form onSubmit={handleSignup} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-name">Full Name</Label>
+                      <div className="relative">
+                        <UserIcon className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                        <Input
+                          id="signup-name"
+                          type="text"
+                          placeholder="HR Manager"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          required
+                          className="pl-10 h-12"
+                          disabled={isLoading}
+                        />
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="signup-email">Email Address</Label>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                          <Input
-                            id="signup-email"
-                            type="email"
-                            placeholder="hr@company.com"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                            className="pl-10 h-12"
-                            disabled={isLoading}
-                          />
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="text-center">
-                        <p className="text-sm text-gray-600 mb-4">
-                          Enter the 6-digit code sent to {email}
-                        </p>
-                        <div className="flex justify-center">
-                          <InputOTP value={otp} onChange={setOtp} maxLength={6}>
-                            <InputOTPGroup>
-                              <InputOTPSlot index={0} />
-                              <InputOTPSlot index={1} />
-                              <InputOTPSlot index={2} />
-                              <InputOTPSlot index={3} />
-                              <InputOTPSlot index={4} />
-                              <InputOTPSlot index={5} />
-                            </InputOTPGroup>
-                          </InputOTP>
-                        </div>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={resetForm}
-                        className="w-full"
-                        disabled={isLoading}
-                      >
-                        Change Details
-                      </Button>
                     </div>
-                  )}
-                  <Button
-                    type="submit"
-                    className="w-full bg-purple-600 hover:bg-purple-700 h-12 text-lg"
-                    disabled={(!email || !name) && !isOtpSent || (isOtpSent && otp.length !== 6) || isLoading}
-                  >
-                    {isLoading ? 'Processing...' : isOtpSent ? 'Create HR Account' : 'Send OTP'}
-                  </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-email">Email Address</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                        <Input
+                          id="signup-email"
+                          type="email"
+                          placeholder="hr@company.com"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          required
+                          className="pl-10 h-12"
+                          disabled={isLoading}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-password">Password</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                        <Input
+                          id="signup-password"
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Create a password"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          required
+                          className="pl-10 pr-10 h-12"
+                          disabled={isLoading}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirm-password">Confirm Password</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                        <Input
+                          id="confirm-password"
+                          type={showConfirmPassword ? "text" : "password"}
+                          placeholder="Confirm your password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          required
+                          className="pl-10 pr-10 h-12"
+                          disabled={isLoading}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                        >
+                          {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                    <Button
+                      type="submit"
+                      className="w-full bg-purple-600 hover:bg-purple-700 h-12 text-lg"
+                      disabled={!email || !password || !name || !confirmPassword || isLoading}
+                    >
+                      {isLoading ? 'Creating Account...' : 'Create HR Account'}
+                    </Button>
+                  </form>
+                </TabsContent>
+              </Tabs>
+            ) : (
+              <div className="space-y-4">
+                <div className="text-center mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900">Reset Password</h3>
+                  <p className="text-sm text-gray-600">
+                    {!isOtpSent ? 'Enter your email to receive an OTP' : 'Enter the OTP and your new password'}
+                  </p>
+                </div>
+                
+                {!isOtpSent ? (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="reset-email">Email Address</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                        <Input
+                          id="reset-email"
+                          type="email"
+                          placeholder="hr@company.com"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          required
+                          className="pl-10 h-12"
+                          disabled={isLoading}
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      onClick={sendPasswordResetOtp}
+                      className="w-full bg-purple-600 hover:bg-purple-700 h-12 text-lg"
+                      disabled={!email || isLoading}
+                    >
+                      {isLoading ? 'Sending OTP...' : 'Send OTP'}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="text-center">
+                      <p className="text-sm text-gray-600 mb-4">
+                        Enter the 6-digit code sent to {email}
+                      </p>
+                      <div className="flex justify-center mb-4">
+                        <InputOTP value={otp} onChange={setOtp} maxLength={6}>
+                          <InputOTPGroup>
+                            <InputOTPSlot index={0} />
+                            <InputOTPSlot index={1} />
+                            <InputOTPSlot index={2} />
+                            <InputOTPSlot index={3} />
+                            <InputOTPSlot index={4} />
+                            <InputOTPSlot index={5} />
+                          </InputOTPGroup>
+                        </InputOTP>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="new-password">New Password</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                        <Input
+                          id="new-password"
+                          type={showNewPassword ? "text" : "password"}
+                          placeholder="Enter new password"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          required
+                          className="pl-10 pr-10 h-12"
+                          disabled={isLoading}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                        >
+                          {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <Button
+                      onClick={verifyOtpAndResetPassword}
+                      className="w-full bg-purple-600 hover:bg-purple-700 h-12 text-lg"
+                      disabled={otp.length !== 6 || !newPassword || isLoading}
+                    >
+                      {isLoading ? 'Resetting Password...' : 'Reset Password'}
+                    </Button>
+                  </div>
+                )}
+                
+                <Button
+                  variant="outline"
+                  onClick={() => setIsPasswordReset(false)}
+                  className="w-full"
+                  disabled={isLoading}
+                >
+                  Back to Sign In
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
