@@ -25,6 +25,7 @@ const UserAuth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showEmailVerification, setShowEmailVerification] = useState(false);
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -53,6 +54,19 @@ const UserAuth = () => {
 
       if (error) {
         console.error('Login error:', error);
+        
+        // Handle specific error cases
+        if (error.message.includes('Email not confirmed')) {
+          toast({
+            title: "Email Not Verified",
+            description: "Please check your email and click the verification link before logging in.",
+            variant: "destructive",
+          });
+          setShowEmailVerification(true);
+          setActiveTab('signup');
+          return;
+        }
+        
         throw error;
       }
 
@@ -118,16 +132,76 @@ const UserAuth = () => {
         throw error;
       }
 
-      console.log('Signup successful:', data.user?.email);
-      toast({
-        title: "Success",
-        description: "Account created successfully! Please check your email for verification.",
-      });
+      console.log('Signup response:', data);
+      
+      // Check if user needs email verification
+      if (data.user && !data.user.email_confirmed_at) {
+        setShowEmailVerification(true);
+        toast({
+          title: "Account Created Successfully!",
+          description: "Please check your email for a verification link before logging in. If you don't see the email, check your spam folder.",
+        });
+      } else if (data.user && data.user.email_confirmed_at) {
+        // User is immediately confirmed (happens when email confirmation is disabled)
+        toast({
+          title: "Success",
+          description: "Account created successfully! You are now logged in.",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Account created successfully! Please check your email for verification.",
+        });
+      }
     } catch (error: any) {
       console.error('Signup failed:', error);
+      
+      let errorMessage = "Failed to create account";
+      if (error.message.includes('User already registered')) {
+        errorMessage = "An account with this email already exists. Please try logging in instead.";
+        setActiveTab('login');
+      }
+      
       toast({
         title: "Signup Failed",
-        description: error.message || "Failed to create account",
+        description: error.message || errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resendVerificationEmail = async () => {
+    if (!email) {
+      toast({
+        title: "Error",
+        description: "Please enter your email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/dashboard/user`
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Email Resent",
+        description: "Please check your email for the verification link.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to resend verification email",
         variant: "destructive",
       });
     } finally {
@@ -241,6 +315,7 @@ const UserAuth = () => {
     setNewPassword('');
     setIsPasswordReset(false);
     setIsOtpSent(false);
+    setShowEmailVerification(false);
   };
 
   const handleTabChange = (tab: string) => {
@@ -363,93 +438,128 @@ const UserAuth = () => {
                 </TabsContent>
                 
                 <TabsContent value="signup">
-                  <form onSubmit={handleSignup} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-name">Full Name</Label>
-                      <div className="relative">
-                        <UserIcon className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                        <Input
-                          id="signup-name"
-                          type="text"
-                          placeholder="John Doe"
-                          value={name}
-                          onChange={(e) => setName(e.target.value)}
-                          required
-                          className="pl-10 h-12"
-                          disabled={isLoading}
-                        />
+                  {showEmailVerification ? (
+                    <div className="space-y-4">
+                      <div className="text-center">
+                        <Mail className="mx-auto h-12 w-12 text-blue-600 mb-4" />
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Check Your Email</h3>
+                        <p className="text-sm text-gray-600 mb-4">
+                          We've sent a verification link to <strong>{email}</strong>
+                        </p>
+                        <p className="text-sm text-gray-500 mb-6">
+                          Click the link in your email to verify your account. If you don't see the email, check your spam folder.
+                        </p>
                       </div>
+                      
+                      <Button
+                        onClick={resendVerificationEmail}
+                        variant="outline"
+                        className="w-full"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? 'Resending...' : 'Resend Verification Email'}
+                      </Button>
+                      
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          setShowEmailVerification(false);
+                          setActiveTab('login');
+                        }}
+                        className="w-full"
+                      >
+                        Back to Sign In
+                      </Button>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-email">Email Address</Label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                        <Input
-                          id="signup-email"
-                          type="email"
-                          placeholder="your@email.com"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          required
-                          className="pl-10 h-12"
-                          disabled={isLoading}
-                        />
+                  ) : (
+                    <form onSubmit={handleSignup} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-name">Full Name</Label>
+                        <div className="relative">
+                          <UserIcon className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                          <Input
+                            id="signup-name"
+                            type="text"
+                            placeholder="John Doe"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            required
+                            className="pl-10 h-12"
+                            disabled={isLoading}
+                          />
+                        </div>
                       </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-password">Password</Label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                        <Input
-                          id="signup-password"
-                          type={showPassword ? "text" : "password"}
-                          placeholder="Create a password"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          required
-                          className="pl-10 pr-10 h-12"
-                          disabled={isLoading}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
-                        >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-email">Email Address</Label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                          <Input
+                            id="signup-email"
+                            type="email"
+                            placeholder="your@email.com"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                            className="pl-10 h-12"
+                            disabled={isLoading}
+                          />
+                        </div>
                       </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="confirm-password">Confirm Password</Label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                        <Input
-                          id="confirm-password"
-                          type={showConfirmPassword ? "text" : "password"}
-                          placeholder="Confirm your password"
-                          value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
-                          required
-                          className="pl-10 pr-10 h-12"
-                          disabled={isLoading}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
-                        >
-                          {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-password">Password</Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                          <Input
+                            id="signup-password"
+                            type={showPassword ? "text" : "password"}
+                            placeholder="Create a password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            className="pl-10 pr-10 h-12"
+                            disabled={isLoading}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                    <Button
-                      type="submit"
-                      className="w-full bg-blue-600 hover:bg-blue-700 h-12 text-lg"
-                      disabled={!email || !password || !name || !confirmPassword || isLoading}
-                    >
-                      {isLoading ? 'Creating Account...' : 'Create Account'}
-                    </Button>
-                  </form>
+                      <div className="space-y-2">
+                        <Label htmlFor="confirm-password">Confirm Password</Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                          <Input
+                            id="confirm-password"
+                            type={showConfirmPassword ? "text" : "password"}
+                            placeholder="Confirm your password"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            required
+                            className="pl-10 pr-10 h-12"
+                            disabled={isLoading}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                          >
+                            {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </div>
+                      <Button
+                        type="submit"
+                        className="w-full bg-blue-600 hover:bg-blue-700 h-12 text-lg"
+                        disabled={!email || !password || !name || !confirmPassword || isLoading}
+                      >
+                        {isLoading ? 'Creating Account...' : 'Create Account'}
+                      </Button>
+                    </form>
+                  )}
                 </TabsContent>
               </Tabs>
             ) : (
