@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -30,8 +29,10 @@ const UserAuth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Redirect to dashboard when user is authenticated
   useEffect(() => {
     if (user) {
+      console.log('User authenticated, redirecting to dashboard:', user.email);
       navigate('/dashboard/user');
     }
   }, [user, navigate]);
@@ -41,19 +42,28 @@ const UserAuth = () => {
     if (!email || !password) return;
 
     setIsLoading(true);
+    console.log('Attempting login for:', email);
+    
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Login error:', error);
+        throw error;
+      }
 
+      console.log('Login successful:', data.user?.email);
       toast({
         title: "Success",
         description: "Successfully logged in!",
       });
+
+      // The redirect will happen automatically via the useEffect when user state updates
     } catch (error: any) {
+      console.error('Login failed:', error);
       toast({
         title: "Login Failed",
         description: error.message || "Invalid email or password",
@@ -87,11 +97,14 @@ const UserAuth = () => {
     }
 
     setIsLoading(true);
+    console.log('Attempting signup for:', email);
+    
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          emailRedirectTo: `${window.location.origin}/dashboard/user`,
           data: {
             name: name,
             role: 'user'
@@ -99,13 +112,18 @@ const UserAuth = () => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Signup error:', error);
+        throw error;
+      }
 
+      console.log('Signup successful:', data.user?.email);
       toast({
         title: "Success",
         description: "Account created successfully! Please check your email for verification.",
       });
     } catch (error: any) {
+      console.error('Signup failed:', error);
       toast({
         title: "Signup Failed",
         description: error.message || "Failed to create account",
