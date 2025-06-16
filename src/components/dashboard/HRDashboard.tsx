@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,7 @@ import { Building2, Users, TrendingUp, Calendar, LogOut, FileText, Star, Clock }
 import { useAuth } from '@/contexts/AuthContext';
 import { applicationService } from '@/services/applicationService';
 import CandidateManagement from './CandidateManagement';
+import CandidateSummary from './CandidateSummary';
 import { useToast } from '@/hooks/use-toast';
 
 const HRDashboard = () => {
@@ -153,11 +153,47 @@ const HRDashboard = () => {
       </header>
 
       <div className="container mx-auto px-6 py-8">
-        <Tabs defaultValue="candidates" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 lg:w-96">
+        <Tabs defaultValue="summary" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3 lg:w-96">
+            <TabsTrigger value="summary">Summary</TabsTrigger>
             <TabsTrigger value="candidates">Candidates</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="summary" className="space-y-6">
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {statsData.map((stat, index) => (
+                <Card key={index} className="hover:shadow-lg transition-all duration-300">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">{stat.title}</p>
+                        <p className="text-3xl font-bold text-gray-900 mt-2">{stat.value}</p>
+                        <p className={`text-sm mt-1 ${stat.color}`}>{stat.change}</p>
+                      </div>
+                      <div className="p-3 bg-gray-50 rounded-full">
+                        {stat.icon}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Candidate Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl">Candidate Performance Summary</CardTitle>
+                <CardDescription>
+                  Overview of candidate performance across all interview stages with hiring recommendations
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <CandidateSummary />
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="candidates" className="space-y-6">
             {/* Stats Cards */}

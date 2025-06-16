@@ -248,6 +248,33 @@ export type Database = {
           },
         ]
       }
+      password_reset_otps: {
+        Row: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          otp_code: string
+          used: boolean | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          otp_code: string
+          used?: boolean | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          otp_code?: string
+          used?: boolean | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           bio: string | null
@@ -307,7 +334,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_password_reset_otp: {
+        Args: { user_email: string }
+        Returns: {
+          success: boolean
+          message: string
+        }[]
+      }
+      verify_password_reset_otp: {
+        Args: { user_email: string; provided_otp: string }
+        Returns: {
+          success: boolean
+          message: string
+        }[]
+      }
     }
     Enums: {
       application_status:
