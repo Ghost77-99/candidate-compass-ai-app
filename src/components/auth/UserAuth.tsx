@@ -25,17 +25,18 @@ const UserAuth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   // Redirect to dashboard when user is authenticated
   useEffect(() => {
-    if (user) {
+    console.log('Auth state - user:', user?.email, 'authLoading:', authLoading);
+    if (!authLoading && user) {
       console.log('User authenticated, redirecting to dashboard:', user.email);
-      navigate('/dashboard/user');
+      navigate('/dashboard/user', { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, authLoading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,7 +62,7 @@ const UserAuth = () => {
         description: "Successfully logged in!",
       });
 
-      // The redirect will happen automatically via the useEffect when user state updates
+      // Don't navigate here - let the useEffect handle it when auth state updates
     } catch (error: any) {
       console.error('Login failed:', error);
       toast({
@@ -246,6 +247,30 @@ const UserAuth = () => {
     setActiveTab(tab);
     resetForm();
   };
+
+  // Show loading while auth context is initializing
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If user is already authenticated, don't show the auth form
+  if (user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Redirecting to dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-6">
