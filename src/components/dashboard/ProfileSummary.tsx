@@ -17,7 +17,7 @@ const ProfileSummary: React.FC<ProfileSummaryProps> = ({ profile, onProfileUpdat
   const { toast } = useToast();
   const [profileData, setProfileData] = useState(profile);
 
-  const updateProfile = async (field: string, value: string) => {
+  const updateProfile = async (field: string, value: string | string[] | number) => {
     try {
       const { error } = await supabase
         .from('profiles')
@@ -50,6 +50,11 @@ const ProfileSummary: React.FC<ProfileSummaryProps> = ({ profile, onProfileUpdat
   const updateSkills = async (skillsString: string) => {
     const skillsArray = skillsString.split(',').map(skill => skill.trim()).filter(Boolean);
     await updateProfile('skills', skillsArray);
+  };
+
+  const updateExperienceYears = async (value: string) => {
+    const numericValue = parseInt(value) || 0;
+    await updateProfile('experience_years', numericValue);
   };
 
   const handleResumeUpload = (resumeUrl: string, summary?: string) => {
@@ -93,7 +98,7 @@ const ProfileSummary: React.FC<ProfileSummaryProps> = ({ profile, onProfileUpdat
               <EditableProfileField
                 label="Experience (Years)"
                 value={profileData.experience_years}
-                onSave={(value) => updateProfile('experience_years', parseInt(value) || 0)}
+                onSave={updateExperienceYears}
                 type="number"
                 placeholder="Years of experience"
               />
