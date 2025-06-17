@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,8 +9,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Search, Eye, Calendar, Clock, MapPin, Star } from 'lucide-react';
+import { Search, Eye, Calendar, Clock, MapPin, Star, FileText, Award } from 'lucide-react';
 import { applicationService } from '@/services/applicationService';
+import { applicationStageService } from '@/services/applicationStageService';
+import StageProgressTracker from './StageProgressTracker';
 import { useToast } from '@/hooks/use-toast';
 
 interface Application {
@@ -20,6 +21,9 @@ interface Application {
   job_id: string;
   status: string;
   applied_date: string;
+  current_stage: string;
+  qualification_score: number;
+  resume_summary: string;
   progress_percentage: number;
   next_interview_date?: string;
   next_interview_time?: string;
@@ -48,6 +52,7 @@ const CandidateManagement = () => {
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [stages, setStages] = useState<any[]>([]);
   const { toast } = useToast();
 
   // Interview scheduling form state
@@ -83,6 +88,43 @@ const CandidateManagement = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadApplicationStages = async (applicationId: string) => {
+    try {
+      const stagesData = await applicationStageService.getApplicationStages(applicationId);
+      setStages(stagesData);
+    } catch (error) {
+      console.error('Error loading stages:', error);
+    }
+  };
+
+  const updateStageStatus = async (applicationId: string, stageName: string, status: string, score?: number) => {
+    try {
+      setIsUpdating(true);
+      await applicationStageService.updateStageStatus(applicationId, stageName, {
+        status: status as any,
+        score
+      });
+
+      await loadApplications();
+      if (selectedApplication?.id === applicationId) {
+        await loadApplicationStages(applicationId);
+      }
+      
+      toast({
+        title: "Success",
+        description: "Stage status updated successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update stage status.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -182,6 +224,15 @@ const CandidateManagement = () => {
     ).join(' ');
   };
 
+  const getQualificationBadge = (score: number) => {
+    if (score >= 75) {
+      return <Badge className="bg-green-100 text-green-800">✓ Qualified</Badge>;
+    } else if (score > 0) {
+      return <Badge className="bg-red-100 text-red-800">✗ Not Qualified</Badge>;
+    }
+    return null;
+  };
+
   if (isLoading) {
     return (
       <div className="text-center py-8">
@@ -248,16 +299,23 @@ const CandidateManagement = () => {
                 </div>
                 <div className="flex flex-col items-end space-y-3">
                   <div className="text-right">
-                    <Badge className={getStatusColor(application.status)}>
-                      {formatStatus(application.status)}
-                    </Badge>
-                    <div className="flex items-center space-x-2 mt-2">
-                      <span className="text-sm text-gray-600">Progress:</span>
-                      <span className="text-sm font-medium">{application.progress_percentage}%</span>
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Badge className={getStatusColor(application.status)}>
+                        {formatStatus(application.status)}
+                      </Badge>
+                      {application.qualification_score > 0 && getQualificationBadge(application.qualification_score)}
                     </div>
-                    <div className="w-32 mt-1">
-                      <Progress value={application.progress_percentage} className="h-2" />
+                    <div className="flex items-center space-x-2 mb-1">
+                      <span className="text-sm text-gray-600">Current Stage:</span>
+                      <span className="text-sm font-medium">{formatStatus(application.current_stage)}</span>
                     </div>
+                    {application.qualification_score > 0 && (
+                      <div className="text-sm text-gray-600">
+                        Resume Score: <span className={application.qualification_score >= 75 ? 'text-green-600' : 'text-red-600'}>
+                          {application.qualification_score}%
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <div className="flex space-x-2">
                     <Select onValueChange={(value) => updateApplicationStatus(application.id, value)} disabled={isUpdating}>
@@ -279,65 +337,98 @@ const CandidateManagement = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setSelectedApplication(application)}
+                          onClick={() => {
+                            setSelectedApplication(application);
+                            loadApplicationStages(application.id);
+                          }}
                         >
-                          <Calendar className="w-4 h-4 mr-2" />
-                          Schedule
+                          <Eye className="w-4 h-4 mr-2" />
+                          View Details
                         </Button>
                       </DialogTrigger>
-                      <DialogContent>
+                      <DialogContent className="max-w-4xl">
                         <DialogHeader>
-                          <DialogTitle>Schedule Interview</DialogTitle>
+                          <DialogTitle>
+                            Candidate Details - {application.profiles.name}
+                          </DialogTitle>
                           <DialogDescription>
-                            Schedule an interview for {application.profiles.name}
+                            {application.jobs.title} at {application.jobs.company}
                           </DialogDescription>
                         </DialogHeader>
-                        <div className="space-y-4">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                           <div>
-                            <Label htmlFor="interview-stage">Interview Stage</Label>
-                            <Select value={interviewStage} onValueChange={setInterviewStage}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select stage" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Aptitude Test">Aptitude Test</SelectItem>
-                                <SelectItem value="Group Discussion">Group Discussion</SelectItem>
-                                <SelectItem value="Technical Test">Technical Test</SelectItem>
-                                <SelectItem value="HR Round">HR Round</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <Label htmlFor="interview-date">Date</Label>
-                            <Input
-                              id="interview-date"
-                              type="date"
-                              value={interviewDate}
-                              onChange={(e) => setInterviewDate(e.target.value)}
+                            <StageProgressTracker 
+                              stages={stages} 
+                              currentStage={application.current_stage}
                             />
                           </div>
-                          <div>
-                            <Label htmlFor="interview-time">Time</Label>
-                            <Input
-                              id="interview-time"
-                              type="time"
-                              value={interviewTime}
-                              onChange={(e) => setInterviewTime(e.target.value)}
-                            />
+                          <div className="space-y-4">
+                            {/* Resume Summary */}
+                            {application.resume_summary && (
+                              <Card>
+                                <CardHeader>
+                                  <CardTitle className="text-base flex items-center space-x-2">
+                                    <FileText className="w-4 h-4" />
+                                    <span>Resume Summary</span>
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  <p className="text-sm text-gray-700">{application.resume_summary}</p>
+                                  {application.qualification_score > 0 && (
+                                    <div className="mt-3 p-2 bg-gray-50 rounded">
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-sm font-medium">Qualification Score:</span>
+                                        <span className={`font-semibold ${
+                                          application.qualification_score >= 75 ? 'text-green-600' : 'text-red-600'
+                                        }`}>
+                                          {application.qualification_score}%
+                                        </span>
+                                      </div>
+                                    </div>
+                                  )}
+                                </CardContent>
+                              </Card>
+                            )}
+
+                            {/* Interview Scheduling */}
+                            <Card>
+                              <CardHeader>
+                                <CardTitle className="text-base">Schedule Interview</CardTitle>
+                              </CardHeader>
+                              <CardContent className="space-y-3">
+                                <Select value={interviewStage} onValueChange={setInterviewStage}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select stage" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="Aptitude Test">Aptitude Test</SelectItem>
+                                    <SelectItem value="Group Discussion">Group Discussion</SelectItem>
+                                    <SelectItem value="Technical Test">Technical Test</SelectItem>
+                                    <SelectItem value="HR Round">HR Round</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <Input
+                                  type="date"
+                                  value={interviewDate}
+                                  onChange={(e) => setInterviewDate(e.target.value)}
+                                />
+                                <Input
+                                  type="time"
+                                  value={interviewTime}
+                                  onChange={(e) => setInterviewTime(e.target.value)}
+                                />
+                                <Input
+                                  type="url"
+                                  placeholder="Meeting link (optional)"
+                                  value={meetingLink}
+                                  onChange={(e) => setMeetingLink(e.target.value)}
+                                />
+                                <Button onClick={scheduleInterview} disabled={isUpdating} className="w-full">
+                                  {isUpdating ? 'Scheduling...' : 'Schedule Interview'}
+                                </Button>
+                              </CardContent>
+                            </Card>
                           </div>
-                          <div>
-                            <Label htmlFor="meeting-link">Meeting Link (Optional)</Label>
-                            <Input
-                              id="meeting-link"
-                              type="url"
-                              placeholder="https://meet.google.com/..."
-                              value={meetingLink}
-                              onChange={(e) => setMeetingLink(e.target.value)}
-                            />
-                          </div>
-                          <Button onClick={scheduleInterview} disabled={isUpdating} className="w-full">
-                            {isUpdating ? 'Scheduling...' : 'Schedule Interview'}
-                          </Button>
                         </div>
                       </DialogContent>
                     </Dialog>
@@ -369,7 +460,7 @@ const CandidateManagement = () => {
         ))}
       </div>
 
-      {filteredApplications.length === 0 && (
+      {filteredApplications.length === 0 && !isLoading && (
         <div className="text-center py-8">
           <div className="text-gray-400 mb-4">
             <Star className="w-12 h-12 mx-auto" />

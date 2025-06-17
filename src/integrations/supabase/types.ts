@@ -9,11 +9,56 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      application_stages: {
+        Row: {
+          application_id: string | null
+          completed_at: string | null
+          created_at: string | null
+          feedback: string | null
+          id: string
+          score: number | null
+          stage_name: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          application_id?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          feedback?: string | null
+          id?: string
+          score?: number | null
+          stage_name: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          application_id?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          feedback?: string | null
+          id?: string
+          score?: number | null
+          stage_name?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_stages_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       applications: {
         Row: {
           applied_date: string | null
           cover_letter: string | null
           created_at: string | null
+          current_stage: string | null
           id: string
           job_id: string
           next_interview_date: string | null
@@ -21,6 +66,10 @@ export type Database = {
           next_interview_time: string | null
           notes: string | null
           progress_percentage: number | null
+          qualification_score: number | null
+          resume_summary: string | null
+          stage_completion_dates: Json | null
+          stage_data: Json | null
           status: Database["public"]["Enums"]["application_status"] | null
           updated_at: string | null
           user_id: string
@@ -29,6 +78,7 @@ export type Database = {
           applied_date?: string | null
           cover_letter?: string | null
           created_at?: string | null
+          current_stage?: string | null
           id?: string
           job_id: string
           next_interview_date?: string | null
@@ -36,6 +86,10 @@ export type Database = {
           next_interview_time?: string | null
           notes?: string | null
           progress_percentage?: number | null
+          qualification_score?: number | null
+          resume_summary?: string | null
+          stage_completion_dates?: Json | null
+          stage_data?: Json | null
           status?: Database["public"]["Enums"]["application_status"] | null
           updated_at?: string | null
           user_id: string
@@ -44,6 +98,7 @@ export type Database = {
           applied_date?: string | null
           cover_letter?: string | null
           created_at?: string | null
+          current_stage?: string | null
           id?: string
           job_id?: string
           next_interview_date?: string | null
@@ -51,6 +106,10 @@ export type Database = {
           next_interview_time?: string | null
           notes?: string | null
           progress_percentage?: number | null
+          qualification_score?: number | null
+          resume_summary?: string | null
+          stage_completion_dates?: Json | null
+          stage_data?: Json | null
           status?: Database["public"]["Enums"]["application_status"] | null
           updated_at?: string | null
           user_id?: string

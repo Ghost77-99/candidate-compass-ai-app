@@ -15,7 +15,7 @@ serve(async (req) => {
   }
 
   try {
-    const { resumeText } = await req.json();
+    const { resumeText, includeQualificationScore = false } = await req.json();
 
     if (!resumeText) {
       return new Response(
@@ -23,6 +23,10 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const systemPrompt = includeQualificationScore
+      ? 'You are an expert resume analyzer and recruiter. Generate a concise, professional summary of the candidate based on their resume. Focus on key skills, experience level, career highlights, and overall qualifications. Keep it under 150 words and be objective about their qualifications.'
+      : 'You are an expert resume analyzer. Generate a concise, professional summary of the candidate based on their resume. Focus on key skills, experience level, and career highlights. Keep it under 150 words.';
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -35,7 +39,7 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'You are an expert resume analyzer. Generate a concise, professional summary of the candidate based on their resume. Focus on key skills, experience level, and career highlights. Keep it under 150 words.'
+            content: systemPrompt
           },
           {
             role: 'user',

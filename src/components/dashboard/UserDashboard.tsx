@@ -10,7 +10,7 @@ import { Briefcase, FileText, Search } from 'lucide-react';
 import { jobsService, Job } from '@/services/jobsService';
 import JobApplicationModal from './JobApplicationModal';
 import JobCard from './JobCard';
-import ApplicationCard from './ApplicationCard';
+import EnhancedApplicationCard from './EnhancedApplicationCard';
 import ProfileSummary from './ProfileSummary';
 import QuickStats from './QuickStats';
 import JobBrowser from './JobBrowser';
@@ -157,7 +157,7 @@ const UserDashboard = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle>Recent Applications</CardTitle>
-                    <CardDescription>Your latest job applications</CardDescription>
+                    <CardDescription>Your latest job applications with progress tracking</CardDescription>
                   </CardHeader>
                   <CardContent>
                     {isLoadingData ? (
@@ -168,7 +168,7 @@ const UserDashboard = () => {
                     ) : applications.length > 0 ? (
                       <div className="space-y-4">
                         {applications.slice(0, 3).map((app) => (
-                          <ApplicationCard key={app.id} application={app} />
+                          <EnhancedApplicationCard key={app.id} application={app} />
                         ))}
                         {applications.length > 3 && (
                           <Button variant="outline" className="w-full" onClick={() => setActiveTab('applications')}>
@@ -249,7 +249,7 @@ const UserDashboard = () => {
               <CardHeader>
                 <CardTitle>My Applications</CardTitle>
                 <CardDescription>
-                  Track all your job applications and their progress
+                  Track all your job applications and their progress through each stage
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -261,7 +261,7 @@ const UserDashboard = () => {
                 ) : applications.length > 0 ? (
                   <div className="space-y-6">
                     {applications.map((app) => (
-                      <ApplicationCard key={app.id} application={app} />
+                      <EnhancedApplicationCard key={app.id} application={app} />
                     ))}
                   </div>
                 ) : (
