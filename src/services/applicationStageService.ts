@@ -26,7 +26,7 @@ export const applicationStageService = {
       throw error;
     }
 
-    return data || [];
+    return (data || []) as ApplicationStage[];
   },
 
   async updateStageStatus(
@@ -78,7 +78,7 @@ export const applicationStageService = {
         .eq('id', applicationId);
     }
 
-    return data;
+    return data as ApplicationStage;
   },
 
   async completeResumeStage(
