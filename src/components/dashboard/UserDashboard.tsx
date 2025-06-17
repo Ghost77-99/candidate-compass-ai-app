@@ -59,7 +59,7 @@ const UserDashboard = () => {
         jobsService.getUserApplications(user.id)
       ]);
       
-      setJobs(jobsData.slice(0, 3)); // Show only first 3 jobs in overview
+      setJobs(jobsData.slice(0, 3));
       setApplications(applicationsData || []);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -79,7 +79,7 @@ const UserDashboard = () => {
   };
 
   const handleApplicationSubmitted = () => {
-    loadDashboardData(); // Refresh the data
+    loadDashboardData();
   };
 
   const isJobApplied = (jobId: string) => {
@@ -142,21 +142,18 @@ const UserDashboard = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 lg:w-96">
+          <TabsList className="grid w-full grid-cols-4 lg:w-[500px]">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="jobs">Browse Jobs</TabsTrigger>
             <TabsTrigger value="applications">My Applications</TabsTrigger>
+            <TabsTrigger value="profile">Profile</TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Left Column - Profile & Applications */}
+              {/* Left Column - Recent Applications */}
               <div className="lg:col-span-2 space-y-6">
-                {/* Profile Summary */}
-                <ProfileSummary profile={profile} />
-
-                {/* Recent Applications */}
                 <Card>
                   <CardHeader>
                     <CardTitle>Recent Applications</CardTitle>
@@ -236,7 +233,6 @@ const UserDashboard = () => {
                   </CardContent>
                 </Card>
 
-                {/* Quick Stats */}
                 <QuickStats applications={applications} />
               </div>
             </div>
@@ -281,6 +277,11 @@ const UserDashboard = () => {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Profile Tab */}
+          <TabsContent value="profile" className="space-y-6">
+            <ProfileSummary profile={profile} onProfileUpdate={loadDashboardData} />
           </TabsContent>
         </Tabs>
       </div>

@@ -1,20 +1,23 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Building2, Users, TrendingUp, Calendar, LogOut, FileText, Star, Clock } from 'lucide-react';
+import { Building2, Users, TrendingUp, Calendar, LogOut, FileText, Star, Clock, Briefcase } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { applicationService } from '@/services/applicationService';
 import CandidateManagement from './CandidateManagement';
 import CandidateSummary from './CandidateSummary';
+import HRProfileSummary from './HRProfileSummary';
 import { useToast } from '@/hooks/use-toast';
 
 const HRDashboard = () => {
   const { user, profile, logout, isLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState('overview');
   const [stats, setStats] = useState({
     totalApplications: 0,
     inProgress: 0,
@@ -71,7 +74,7 @@ const HRDashboard = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
@@ -120,47 +123,52 @@ const HRDashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-10">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
+      <header className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-6">
             <div className="flex items-center space-x-4">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                <Building2 className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">TalentHub</h1>
-                <p className="text-sm text-gray-600">HR Dashboard</p>
+              <div className="flex items-center space-x-2">
+                <Briefcase className="h-8 w-8 text-blue-600" />
+                <h1 className="text-2xl font-bold text-gray-900">TalentHub</h1>
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-3">
-                <Avatar>
-                  <AvatarFallback className="bg-purple-100 text-purple-600">
-                    {profile.name?.split(' ').map(n => n[0]).join('') || 'HR'}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="hidden sm:block">
-                  <p className="font-medium text-gray-900">{profile.name}</p>
-                  <p className="text-sm text-gray-600">{profile.department || 'HR Department'}</p>
-                </div>
+              <Avatar>
+                <AvatarFallback className="bg-blue-100 text-blue-600">
+                  {profile.name?.charAt(0) || 'H'}
+                </AvatarFallback>
+              </Avatar>
+              <div className="hidden md:block">
+                <p className="text-sm font-medium text-gray-900">{profile.name}</p>
+                <p className="text-sm text-gray-500">{profile.email}</p>
               </div>
-              <Button variant="ghost" onClick={handleLogout}>
-                <LogOut className="w-4 h-4" />
+              <Button onClick={handleLogout} variant="outline" size="sm">
+                Logout
               </Button>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="container mx-auto px-6 py-8">
-        <Tabs defaultValue="summary" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 lg:w-96">
-            <TabsTrigger value="summary">Summary</TabsTrigger>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Welcome Section */}
+        <div className="mb-8">
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">
+            Welcome back, {profile.name}!
+          </h2>
+          <p className="text-gray-600">Manage candidates and track your hiring progress.</p>
+        </div>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4 lg:w-[500px]">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="candidates">Candidates</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="summary">Summary</TabsTrigger>
+            <TabsTrigger value="profile">Profile</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="summary" className="space-y-6">
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-6">
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {statsData.map((stat, index) => (
@@ -181,42 +189,37 @@ const HRDashboard = () => {
               ))}
             </div>
 
-            {/* Candidate Summary */}
+            {/* Quick Summary */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-xl">Candidate Performance Summary</CardTitle>
+                <CardTitle>Quick Overview</CardTitle>
                 <CardDescription>
-                  Overview of candidate performance across all interview stages with hiring recommendations
+                  Key metrics and recent activity in your hiring pipeline
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <CandidateSummary />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="text-center p-4 bg-blue-50 rounded-lg">
+                    <div className="text-2xl font-bold text-blue-600">{stats.totalApplications}</div>
+                    <div className="text-sm text-gray-600">Total Applications</div>
+                  </div>
+                  <div className="text-center p-4 bg-purple-50 rounded-lg">
+                    <div className="text-2xl font-bold text-purple-600">{stats.inProgress}</div>
+                    <div className="text-sm text-gray-600">In Progress</div>
+                  </div>
+                  <div className="text-center p-4 bg-green-50 rounded-lg">
+                    <div className="text-2xl font-bold text-green-600">
+                      {stats.totalApplications > 0 ? Math.round((stats.hiredThisMonth / stats.totalApplications) * 100) : 0}%
+                    </div>
+                    <div className="text-sm text-gray-600">Success Rate</div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
 
+          {/* Candidates Tab */}
           <TabsContent value="candidates" className="space-y-6">
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {statsData.map((stat, index) => (
-                <Card key={index} className="hover:shadow-lg transition-all duration-300">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                        <p className="text-3xl font-bold text-gray-900 mt-2">{stat.value}</p>
-                        <p className={`text-sm mt-1 ${stat.color}`}>{stat.change}</p>
-                      </div>
-                      <div className="p-3 bg-gray-50 rounded-full">
-                        {stat.icon}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            {/* Candidate Management */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-xl">Candidate Management</CardTitle>
@@ -230,97 +233,24 @@ const HRDashboard = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="analytics" className="space-y-6">
-            {/* Analytics Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Application Trends</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">This Week</span>
-                      <span className="font-semibold">{Math.floor(stats.totalApplications * 0.3)} applications</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">This Month</span>
-                      <span className="font-semibold">{stats.totalApplications} applications</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Conversion Rate</span>
-                      <span className="font-semibold text-green-600">
-                        {stats.totalApplications > 0 ? Math.round((stats.hiredThisMonth / stats.totalApplications) * 100) : 0}%
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Interview Pipeline</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Scheduled Today</span>
-                      <div className="flex items-center space-x-2">
-                        <Clock className="w-4 h-4 text-blue-600" />
-                        <span className="font-semibold">{stats.interviewsToday}</span>
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">In Progress</span>
-                      <span className="font-semibold text-purple-600">{stats.inProgress}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Completed</span>
-                      <span className="font-semibold text-green-600">{stats.hiredThisMonth}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Performance Metrics</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Avg. Time to Hire</span>
-                      <span className="font-semibold">14 days</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Interview Show Rate</span>
-                      <span className="font-semibold text-green-600">92%</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Offer Acceptance</span>
-                      <span className="font-semibold text-blue-600">85%</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Additional Analytics Info */}
+          {/* Summary Tab */}
+          <TabsContent value="summary" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Detailed Analytics</CardTitle>
+                <CardTitle className="text-xl">Candidate Performance Summary</CardTitle>
                 <CardDescription>
-                  Comprehensive analytics and reporting features for tracking hiring performance
+                  Overview of candidate performance across all interview stages with hiring recommendations
                 </CardDescription>
               </CardHeader>
-              <CardContent className="text-center py-16">
-                <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Advanced Analytics Coming Soon</h3>
-                <p className="text-gray-600 max-w-md mx-auto">
-                  Detailed reporting features including charts, trends analysis, and performance metrics will be available here.
-                </p>
+              <CardContent>
+                <CandidateSummary />
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Profile Tab */}
+          <TabsContent value="profile" className="space-y-6">
+            <HRProfileSummary profile={profile} onProfileUpdate={loadStats} />
           </TabsContent>
         </Tabs>
       </div>
