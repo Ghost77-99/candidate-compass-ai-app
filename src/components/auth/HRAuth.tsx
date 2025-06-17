@@ -6,19 +6,22 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { Building2, ArrowLeft, Mail, UserIcon } from 'lucide-react';
+import { Building2, ArrowLeft, Mail, UserIcon, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import PasswordResetModal from './PasswordResetModal';
 
 const HRAuth = () => {
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [activeTab, setActiveTab] = useState('login');
-  const [isOtpSent, setIsOtpSent] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -29,88 +32,127 @@ const HRAuth = () => {
     }
   }, [user, navigate]);
 
-  const sendOtp = async (emailAddress: string) => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase.auth.signInWithOtp({
-        email: emailAddress,
-        options: {
-          shouldCreateUser: activeTab === 'signup'
-        }
-      });
-
-      if (error) throw error;
-
-      setIsOtpSent(true);
-      toast({
-        title: "OTP Sent",
-        description: "Please check your email for the verification code.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to send OTP",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const verifyOtp = async (emailAddress: string, otpCode: string) => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        email: emailAddress,
-        token: otpCode,
-        type: 'email'
-      });
-
-      if (error) throw error;
-
-      navigate('/dashboard/hr');
-      toast({
-        title: "Success",
-        description: "Successfully authenticated!",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Invalid OTP",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
+    if (!email || !password) {
+      toast({
+        title: "Error",
+        description: "Please fill in all fields",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    if (!isOtpSent) {
-      await sendOtp(email);
-    } else if (otp.length === 6) {
-      await verifyOtp(email, otp);
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      // Check if user has HR role
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', data.user.id)
+        .single();
+
+      if (profile?.role !== 'hr') {
+        await supabase.auth.signOut();
+        throw new Error('Access denied. HR credentials required.');
+      }
+
+      toast({
+        title: "Success",
+        description: "Successfully logged in!",
+      });
+      navigate('/dashboard/hr');
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to login",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !name) return;
+    if (!email || !password || !name || !confirmPassword) {
+      toast({
+        title: "Error",
+        description: "Please fill in all fields",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    if (!isOtpSent) {
-      await sendOtp(email);
-    } else if (otp.length === 6) {
-      await verifyOtp(email, otp);
+    if (password !== confirmPassword) {
+      toast({
+        title: "Error",
+        description: "Passwords do not match",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (password.length < 6) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 6 characters long",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name: name,
+            role: 'hr'
+          },
+          emailRedirectTo: `${window.location.origin}/dashboard/hr`
+        }
+      });
+
+      if (error) throw error;
+
+      // Update profile with HR role
+      if (data.user) {
+        await supabase
+          .from('profiles')
+          .update({ role: 'hr' })
+          .eq('id', data.user.id);
+      }
+
+      toast({
+        title: "Success",
+        description: "HR account created successfully! Please check your email to verify your account.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create account",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const resetForm = () => {
     setEmail('');
-    setOtp('');
+    setPassword('');
+    setConfirmPassword('');
     setName('');
-    setIsOtpSent(false);
   };
 
   const handleTabChange = (tab: string) => {
@@ -137,7 +179,7 @@ const HRAuth = () => {
             </div>
             <CardTitle className="text-2xl text-purple-600">HR Portal</CardTitle>
             <CardDescription>
-              Access the HR management dashboard with secure OTP authentication
+              Access the HR management dashboard with secure authentication
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -149,136 +191,157 @@ const HRAuth = () => {
               
               <TabsContent value="login">
                 <form onSubmit={handleLogin} className="space-y-4">
-                  {!isOtpSent ? (
-                    <div className="space-y-2">
-                      <Label htmlFor="login-email">Email Address</Label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                        <Input
-                          id="login-email"
-                          type="email"
-                          placeholder="hr@company.com"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          required
-                          className="pl-10 h-12"
-                          disabled={isLoading}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="text-center">
-                        <p className="text-sm text-gray-600 mb-4">
-                          Enter the 6-digit code sent to {email}
-                        </p>
-                        <div className="flex justify-center">
-                          <InputOTP value={otp} onChange={setOtp} maxLength={6}>
-                            <InputOTPGroup>
-                              <InputOTPSlot index={0} />
-                              <InputOTPSlot index={1} />
-                              <InputOTPSlot index={2} />
-                              <InputOTPSlot index={3} />
-                              <InputOTPSlot index={4} />
-                              <InputOTPSlot index={5} />
-                            </InputOTPGroup>
-                          </InputOTP>
-                        </div>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={resetForm}
-                        className="w-full"
+                  <div className="space-y-2">
+                    <Label htmlFor="login-email">Email Address</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="login-email"
+                        type="email"
+                        placeholder="hr@company.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        className="pl-10 h-12"
                         disabled={isLoading}
-                      >
-                        Change Email Address
-                      </Button>
+                      />
                     </div>
-                  )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="login-password">Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="login-password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Enter your password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        className="pl-10 pr-10 h-12"
+                        disabled={isLoading}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswordReset(true)}
+                      className="text-sm text-purple-600 hover:text-purple-700 font-medium"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+
                   <Button
                     type="submit"
                     className="w-full bg-purple-600 hover:bg-purple-700 h-12 text-lg"
-                    disabled={(!email && !isOtpSent) || (isOtpSent && otp.length !== 6) || isLoading}
+                    disabled={isLoading}
                   >
-                    {isLoading ? 'Processing...' : isOtpSent ? 'Verify OTP' : 'Send OTP'}
+                    {isLoading ? 'Signing in...' : 'Sign In'}
                   </Button>
                 </form>
               </TabsContent>
               
               <TabsContent value="signup">
                 <form onSubmit={handleSignup} className="space-y-4">
-                  {!isOtpSent ? (
-                    <>
-                      <div className="space-y-2">
-                        <Label htmlFor="signup-name">Full Name</Label>
-                        <div className="relative">
-                          <UserIcon className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                          <Input
-                            id="signup-name"
-                            type="text"
-                            placeholder="HR Manager"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            required
-                            className="pl-10 h-12"
-                            disabled={isLoading}
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="signup-email">Email Address</Label>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                          <Input
-                            id="signup-email"
-                            type="email"
-                            placeholder="hr@company.com"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                            className="pl-10 h-12"
-                            disabled={isLoading}
-                          />
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="text-center">
-                        <p className="text-sm text-gray-600 mb-4">
-                          Enter the 6-digit code sent to {email}
-                        </p>
-                        <div className="flex justify-center">
-                          <InputOTP value={otp} onChange={setOtp} maxLength={6}>
-                            <InputOTPGroup>
-                              <InputOTPSlot index={0} />
-                              <InputOTPSlot index={1} />
-                              <InputOTPSlot index={2} />
-                              <InputOTPSlot index={3} />
-                              <InputOTPSlot index={4} />
-                              <InputOTPSlot index={5} />
-                            </InputOTPGroup>
-                          </InputOTP>
-                        </div>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={resetForm}
-                        className="w-full"
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-name">Full Name</Label>
+                    <div className="relative">
+                      <UserIcon className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="signup-name"
+                        type="text"
+                        placeholder="HR Manager"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        required
+                        className="pl-10 h-12"
                         disabled={isLoading}
-                      >
-                        Change Details
-                      </Button>
+                      />
                     </div>
-                  )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-email">Email Address</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="signup-email"
+                        type="email"
+                        placeholder="hr@company.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        className="pl-10 h-12"
+                        disabled={isLoading}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-password">Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="signup-password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Create a password (min. 6 characters)"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        className="pl-10 pr-10 h-12"
+                        disabled={isLoading}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-password">Confirm Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="confirm-password"
+                        type={showConfirmPassword ? "text" : "password"}
+                        placeholder="Confirm your password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                        className="pl-10 pr-10 h-12"
+                        disabled={isLoading}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                      >
+                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+
                   <Button
                     type="submit"
                     className="w-full bg-purple-600 hover:bg-purple-700 h-12 text-lg"
-                    disabled={(!email || !name) && !isOtpSent || (isOtpSent && otp.length !== 6) || isLoading}
+                    disabled={isLoading}
                   >
-                    {isLoading ? 'Processing...' : isOtpSent ? 'Create HR Account' : 'Send OTP'}
+                    {isLoading ? 'Creating Account...' : 'Create HR Account'}
                   </Button>
                 </form>
               </TabsContent>
@@ -286,6 +349,11 @@ const HRAuth = () => {
           </CardContent>
         </Card>
       </div>
+
+      <PasswordResetModal
+        isOpen={showPasswordReset}
+        onClose={() => setShowPasswordReset(false)}
+      />
     </div>
   );
 };

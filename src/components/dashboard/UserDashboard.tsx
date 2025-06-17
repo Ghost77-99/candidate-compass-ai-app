@@ -6,11 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Briefcase, FileText, Search } from 'lucide-react';
+import { Briefcase, FileText, Search, ClipboardList } from 'lucide-react';
 import { jobsService, Job } from '@/services/jobsService';
 import JobApplicationModal from './JobApplicationModal';
 import JobCard from './JobCard';
 import EnhancedApplicationCard from './EnhancedApplicationCard';
+import ApplicationStagesManager from './ApplicationStagesManager';
 import ProfileSummary from './ProfileSummary';
 import QuickStats from './QuickStats';
 import JobBrowser from './JobBrowser';
@@ -24,6 +25,7 @@ const UserDashboard = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [applications, setApplications] = useState<any[]>([]);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [selectedApplication, setSelectedApplication] = useState<any | null>(null);
   const [isApplicationModalOpen, setIsApplicationModalOpen] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
@@ -80,6 +82,11 @@ const UserDashboard = () => {
 
   const handleApplicationSubmitted = () => {
     loadDashboardData();
+  };
+
+  const handleViewStages = (application: any) => {
+    setSelectedApplication(application);
+    setActiveTab('stages');
   };
 
   const isJobApplied = (jobId: string) => {
@@ -142,10 +149,11 @@ const UserDashboard = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-[500px]">
+          <TabsList className="grid w-full grid-cols-5 lg:w-[600px]">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="jobs">Browse Jobs</TabsTrigger>
             <TabsTrigger value="applications">My Applications</TabsTrigger>
+            <TabsTrigger value="stages">Application Stages</TabsTrigger>
             <TabsTrigger value="profile">Profile</TabsTrigger>
           </TabsList>
 
@@ -168,7 +176,11 @@ const UserDashboard = () => {
                     ) : applications.length > 0 ? (
                       <div className="space-y-4">
                         {applications.slice(0, 3).map((app) => (
-                          <EnhancedApplicationCard key={app.id} application={app} />
+                          <EnhancedApplicationCard 
+                            key={app.id} 
+                            application={app}
+                            onViewStages={() => handleViewStages(app)}
+                          />
                         ))}
                         {applications.length > 3 && (
                           <Button variant="outline" className="w-full" onClick={() => setActiveTab('applications')}>
@@ -261,7 +273,11 @@ const UserDashboard = () => {
                 ) : applications.length > 0 ? (
                   <div className="space-y-6">
                     {applications.map((app) => (
-                      <EnhancedApplicationCard key={app.id} application={app} />
+                      <EnhancedApplicationCard 
+                        key={app.id} 
+                        application={app}
+                        onViewStages={() => handleViewStages(app)}
+                      />
                     ))}
                   </div>
                 ) : (
@@ -272,6 +288,39 @@ const UserDashboard = () => {
                     <Button onClick={() => setActiveTab('jobs')}>
                       <Search className="w-4 h-4 mr-2" />
                       Browse Available Jobs
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Application Stages Tab */}
+          <TabsContent value="stages" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ClipboardList className="w-5 h-5" />
+                  Application Stages
+                </CardTitle>
+                <CardDescription>
+                  Complete each stage of your application process
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {selectedApplication ? (
+                  <ApplicationStagesManager
+                    applicationId={selectedApplication.id}
+                    currentStage={selectedApplication.current_stage}
+                    onStageComplete={loadDashboardData}
+                  />
+                ) : (
+                  <div className="text-center py-16">
+                    <ClipboardList className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No Application Selected</h3>
+                    <p className="text-gray-600 mb-6">Select an application from your applications list to view and complete stages</p>
+                    <Button onClick={() => setActiveTab('applications')}>
+                      View My Applications
                     </Button>
                   </div>
                 )}
