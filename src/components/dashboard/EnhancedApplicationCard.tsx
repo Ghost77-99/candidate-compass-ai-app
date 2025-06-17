@@ -27,9 +27,13 @@ interface Application {
 
 interface EnhancedApplicationCardProps {
   application: Application;
+  onViewStages?: () => void;
 }
 
-const EnhancedApplicationCard: React.FC<EnhancedApplicationCardProps> = ({ application }) => {
+const EnhancedApplicationCard: React.FC<EnhancedApplicationCardProps> = ({ 
+  application, 
+  onViewStages 
+}) => {
   const [stages, setStages] = useState<ApplicationStage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -161,6 +165,12 @@ const EnhancedApplicationCard: React.FC<EnhancedApplicationCardProps> = ({ appli
               )}
             </DialogContent>
           </Dialog>
+          
+          {onViewStages && (
+            <Button variant="outline" size="sm" onClick={onViewStages}>
+              Manage Stages
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

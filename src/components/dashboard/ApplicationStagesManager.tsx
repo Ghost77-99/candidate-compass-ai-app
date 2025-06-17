@@ -14,6 +14,7 @@ import GroupDiscussionStage from './stages/GroupDiscussionStage';
 import TechnicalTestStage from './stages/TechnicalTestStage';
 import HRRoundStage from './stages/HRRoundStage';
 import PersonalityTestStage from './stages/PersonalityTestStage';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ApplicationStagesManagerProps {
   applicationId: string;
@@ -48,6 +49,7 @@ const ApplicationStagesManager: React.FC<ApplicationStagesManagerProps> = ({
   const [activeStage, setActiveStage] = useState(currentStage);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
     loadStages();
@@ -134,9 +136,12 @@ const ApplicationStagesManager: React.FC<ApplicationStagesManagerProps> = ({
       case 'resume_upload':
         return (
           <EnhancedResumeUpload
+            userId={user?.id || ''}
             applicationId={applicationId}
-            onUploadComplete={(score) => handleStageComplete(stageName, score)}
-            isCompleted={isCompleted}
+            onUploadComplete={(resumeUrl: string, summary?: string, score?: number) => 
+              handleStageComplete(stageName, score || 0)
+            }
+            showQualificationCheck={true}
           />
         );
       case 'aptitude_test':
