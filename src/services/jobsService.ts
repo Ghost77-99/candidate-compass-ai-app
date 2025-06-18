@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface Job {
@@ -8,12 +7,16 @@ export interface Job {
   description: string;
   location: string;
   job_type: 'full_time' | 'part_time' | 'contract' | 'internship';
-  experience_level: 'entry' | 'mid' | 'senior' | 'lead';
+  experience_level: 'entry' | 'mid' | 'senior' | 'executive';
+  job_category: 'technical' | 'non_technical';
+  applicant_level?: string;
   salary_min?: number;
   salary_max?: number;
   required_skills?: string[];
   posted_date: string;
   is_active: boolean;
+  posted_by?: string;
+  application_deadline?: string;
 }
 
 export interface Application {
