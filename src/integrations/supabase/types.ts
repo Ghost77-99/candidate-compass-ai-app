@@ -196,6 +196,7 @@ export type Database = {
       }
       jobs: {
         Row: {
+          applicant_level: string | null
           application_deadline: string | null
           company: string
           created_at: string | null
@@ -203,6 +204,7 @@ export type Database = {
           experience_level: Database["public"]["Enums"]["experience_level"]
           id: string
           is_active: boolean | null
+          job_category: Database["public"]["Enums"]["job_category"] | null
           job_type: Database["public"]["Enums"]["job_type"]
           location: string
           posted_by: string | null
@@ -214,6 +216,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          applicant_level?: string | null
           application_deadline?: string | null
           company: string
           created_at?: string | null
@@ -221,6 +224,7 @@ export type Database = {
           experience_level?: Database["public"]["Enums"]["experience_level"]
           id?: string
           is_active?: boolean | null
+          job_category?: Database["public"]["Enums"]["job_category"] | null
           job_type?: Database["public"]["Enums"]["job_type"]
           location: string
           posted_by?: string | null
@@ -232,6 +236,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          applicant_level?: string | null
           application_deadline?: string | null
           company?: string
           created_at?: string | null
@@ -239,6 +244,7 @@ export type Database = {
           experience_level?: Database["public"]["Enums"]["experience_level"]
           id?: string
           is_active?: boolean | null
+          job_category?: Database["public"]["Enums"]["job_category"] | null
           job_type?: Database["public"]["Enums"]["job_type"]
           location?: string
           posted_by?: string | null
@@ -421,6 +427,7 @@ export type Database = {
         | "completed"
         | "rejected"
       experience_level: "entry" | "mid" | "senior" | "executive"
+      job_category: "technical" | "non_technical"
       job_type: "full_time" | "part_time" | "contract" | "internship"
       user_role: "user" | "hr" | "admin"
       user_type: "hr" | "job_seeker"
@@ -549,6 +556,7 @@ export const Constants = {
         "rejected",
       ],
       experience_level: ["entry", "mid", "senior", "executive"],
+      job_category: ["technical", "non_technical"],
       job_type: ["full_time", "part_time", "contract", "internship"],
       user_role: ["user", "hr", "admin"],
       user_type: ["hr", "job_seeker"],

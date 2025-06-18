@@ -1,15 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Search, Eye, Calendar, Clock, MapPin, Star, FileText, Award } from 'lucide-react';
+import { Search, Eye, Calendar, Clock, MapPin, Star, FileText } from 'lucide-react';
 import { applicationService } from '@/services/applicationService';
 import { applicationStageService } from '@/services/applicationStageService';
 import StageProgressTracker from './StageProgressTracker';
@@ -53,6 +51,7 @@ const CandidateManagement = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [stages, setStages] = useState<any[]>([]);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
 
   // Interview scheduling form state
@@ -97,34 +96,6 @@ const CandidateManagement = () => {
       setStages(stagesData);
     } catch (error) {
       console.error('Error loading stages:', error);
-    }
-  };
-
-  const updateStageStatus = async (applicationId: string, stageName: string, status: string, score?: number) => {
-    try {
-      setIsUpdating(true);
-      await applicationStageService.updateStageStatus(applicationId, stageName, {
-        status: status as any,
-        score
-      });
-
-      await loadApplications();
-      if (selectedApplication?.id === applicationId) {
-        await loadApplicationStages(applicationId);
-      }
-      
-      toast({
-        title: "Success",
-        description: "Stage status updated successfully.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update stage status.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUpdating(false);
     }
   };
 
@@ -203,6 +174,12 @@ const CandidateManagement = () => {
     } finally {
       setIsUpdating(false);
     }
+  };
+
+  const handleViewDetails = (application: Application) => {
+    setSelectedApplication(application);
+    loadApplicationStages(application.id);
+    setDialogOpen(true);
   };
 
   const getStatusColor = (status: string) => {
@@ -332,106 +309,14 @@ const CandidateManagement = () => {
                         <SelectItem value="rejected">Rejected</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedApplication(application);
-                            loadApplicationStages(application.id);
-                          }}
-                        >
-                          <Eye className="w-4 h-4 mr-2" />
-                          View Details
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-4xl">
-                        <DialogHeader>
-                          <DialogTitle>
-                            Candidate Details - {application.profiles.name}
-                          </DialogTitle>
-                          <DialogDescription>
-                            {application.jobs.title} at {application.jobs.company}
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                          <div>
-                            <StageProgressTracker 
-                              stages={stages} 
-                              currentStage={application.current_stage}
-                            />
-                          </div>
-                          <div className="space-y-4">
-                            {/* Resume Summary */}
-                            {application.resume_summary && (
-                              <Card>
-                                <CardHeader>
-                                  <CardTitle className="text-base flex items-center space-x-2">
-                                    <FileText className="w-4 h-4" />
-                                    <span>Resume Summary</span>
-                                  </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                  <p className="text-sm text-gray-700">{application.resume_summary}</p>
-                                  {application.qualification_score > 0 && (
-                                    <div className="mt-3 p-2 bg-gray-50 rounded">
-                                      <div className="flex items-center justify-between">
-                                        <span className="text-sm font-medium">Qualification Score:</span>
-                                        <span className={`font-semibold ${
-                                          application.qualification_score >= 75 ? 'text-green-600' : 'text-red-600'
-                                        }`}>
-                                          {application.qualification_score}%
-                                        </span>
-                                      </div>
-                                    </div>
-                                  )}
-                                </CardContent>
-                              </Card>
-                            )}
-
-                            {/* Interview Scheduling */}
-                            <Card>
-                              <CardHeader>
-                                <CardTitle className="text-base">Schedule Interview</CardTitle>
-                              </CardHeader>
-                              <CardContent className="space-y-3">
-                                <Select value={interviewStage} onValueChange={setInterviewStage}>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select stage" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="Aptitude Test">Aptitude Test</SelectItem>
-                                    <SelectItem value="Group Discussion">Group Discussion</SelectItem>
-                                    <SelectItem value="Technical Test">Technical Test</SelectItem>
-                                    <SelectItem value="HR Round">HR Round</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <Input
-                                  type="date"
-                                  value={interviewDate}
-                                  onChange={(e) => setInterviewDate(e.target.value)}
-                                />
-                                <Input
-                                  type="time"
-                                  value={interviewTime}
-                                  onChange={(e) => setInterviewTime(e.target.value)}
-                                />
-                                <Input
-                                  type="url"
-                                  placeholder="Meeting link (optional)"
-                                  value={meetingLink}
-                                  onChange={(e) => setMeetingLink(e.target.value)}
-                                />
-                                <Button onClick={scheduleInterview} disabled={isUpdating} className="w-full">
-                                  {isUpdating ? 'Scheduling...' : 'Schedule Interview'}
-                                </Button>
-                              </CardContent>
-                            </Card>
-                          </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleViewDetails(application)}
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      View Details
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -459,6 +344,97 @@ const CandidateManagement = () => {
           </Card>
         ))}
       </div>
+
+      {/* Details Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>
+              Candidate Details - {selectedApplication?.profiles.name}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedApplication?.jobs.title} at {selectedApplication?.jobs.company}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedApplication && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <StageProgressTracker 
+                  stages={stages} 
+                  currentStage={selectedApplication.current_stage}
+                />
+              </div>
+              <div className="space-y-4">
+                {/* Resume Summary */}
+                {selectedApplication.resume_summary && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base flex items-center space-x-2">
+                        <FileText className="w-4 h-4" />
+                        <span>Resume Summary</span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-gray-700">{selectedApplication.resume_summary}</p>
+                      {selectedApplication.qualification_score > 0 && (
+                        <div className="mt-3 p-2 bg-gray-50 rounded">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">Qualification Score:</span>
+                            <span className={`font-semibold ${
+                              selectedApplication.qualification_score >= 75 ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                              {selectedApplication.qualification_score}%
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Interview Scheduling */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Schedule Interview</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <Select value={interviewStage} onValueChange={setInterviewStage}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select stage" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Aptitude Test">Aptitude Test</SelectItem>
+                        <SelectItem value="Group Discussion">Group Discussion</SelectItem>
+                        <SelectItem value="Technical Test">Technical Test</SelectItem>
+                        <SelectItem value="HR Round">HR Round</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="date"
+                      value={interviewDate}
+                      onChange={(e) => setInterviewDate(e.target.value)}
+                    />
+                    <Input
+                      type="time"
+                      value={interviewTime}
+                      onChange={(e) => setInterviewTime(e.target.value)}
+                    />
+                    <Input
+                      type="url"
+                      placeholder="Meeting link (optional)"
+                      value={meetingLink}
+                      onChange={(e) => setMeetingLink(e.target.value)}
+                    />
+                    <Button onClick={scheduleInterview} disabled={isUpdating} className="w-full">
+                      {isUpdating ? 'Scheduling...' : 'Schedule Interview'}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {filteredApplications.length === 0 && !isLoading && (
         <div className="text-center py-8">

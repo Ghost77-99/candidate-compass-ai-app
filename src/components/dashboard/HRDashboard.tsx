@@ -1,16 +1,16 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Building2, Users, TrendingUp, Calendar, LogOut, FileText, Star, Clock, Briefcase } from 'lucide-react';
+import { Building2, Users, TrendingUp, Calendar, LogOut, FileText, Star, Clock, Briefcase, Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { applicationService } from '@/services/applicationService';
 import CandidateManagement from './CandidateManagement';
 import CandidateSummary from './CandidateSummary';
 import HRProfileSummary from './HRProfileSummary';
+import JobCreationModal from './JobCreationModal';
 import { useToast } from '@/hooks/use-toast';
 
 const HRDashboard = () => {
@@ -18,6 +18,7 @@ const HRDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('overview');
+  const [isJobModalOpen, setIsJobModalOpen] = useState(false);
   const [stats, setStats] = useState({
     totalApplications: 0,
     inProgress: 0,
@@ -152,11 +153,17 @@ const HRDashboard = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome back, {profile.name}!
-          </h2>
-          <p className="text-gray-600">Manage candidates and track your hiring progress.</p>
+        <div className="mb-8 flex justify-between items-center">
+          <div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">
+              Welcome back, {profile.name}!
+            </h2>
+            <p className="text-gray-600">Manage candidates and track your hiring progress.</p>
+          </div>
+          <Button onClick={() => setIsJobModalOpen(true)} className="flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            Create Job
+          </Button>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -254,6 +261,12 @@ const HRDashboard = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      <JobCreationModal
+        isOpen={isJobModalOpen}
+        onClose={() => setIsJobModalOpen(false)}
+        onJobCreated={loadStats}
+      />
     </div>
   );
 };
