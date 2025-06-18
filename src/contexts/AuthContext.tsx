@@ -1,15 +1,16 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User } from '@supabase/supabase-js';
+import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Profile {
   id: string;
   name: string | null;
   email: string | null;
-  phone: string | null;
   role: string | null;
+  user_type: 'hr' | 'job_seeker' | null;
   department: string | null;
+  phone: string | null;
   location: string | null;
   bio: string | null;
   skills: string[] | null;
@@ -17,173 +18,20 @@ interface Profile {
   resume_url: string | null;
   profile_image_url: string | null;
   company: string | null;
-  created_at: string | null;
-  updated_at: string | null;
 }
 
 interface AuthContextType {
   user: User | null;
+  session: Session | null;
   profile: Profile | null;
   isLoading: boolean;
+  login: (email: string, password: string) => Promise<{ error: any }>;
+  signup: (email: string, password: string, profileData?: any) => Promise<{ error: any }>;
   logout: () => Promise<void>;
+  updateProfile: (updates: Partial<Profile>) => Promise<{ error: any }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Sample skills pool for random assignment
-  const sampleSkills = [
-    ['React', 'TypeScript', 'JavaScript', 'CSS', 'HTML'],
-    ['Python', 'Django', 'PostgreSQL', 'AWS', 'Docker'],
-    ['Node.js', 'Express', 'MongoDB', 'GraphQL', 'Redis'],
-    ['Java', 'Spring Boot', 'Microservices', 'Kubernetes', 'Jenkins'],
-    ['Product Management', 'Agile', 'Scrum', 'Data Analysis', 'User Research'],
-    ['Figma', 'Adobe Creative Suite', 'User Experience', 'Prototyping', 'Wireframing'],
-    ['Machine Learning', 'Python', 'TensorFlow', 'SQL', 'Data Visualization'],
-    ['Marketing', 'SEO', 'Content Creation', 'Social Media', 'Google Analytics']
-  ];
-
-  const sampleBios = [
-    "Passionate software developer with expertise in modern web technologies. Love building user-centric applications and learning new frameworks.",
-    "Experienced product manager focused on delivering innovative solutions that drive business growth and enhance user experience.",
-    "Creative designer with a keen eye for detail and user experience. Specialized in creating intuitive and visually appealing interfaces.",
-    "Data-driven professional with strong analytical skills. Experienced in transforming complex data into actionable insights.",
-    "Full-stack developer passionate about clean code and scalable architecture. Always eager to tackle challenging technical problems.",
-    "Marketing professional with digital expertise. Focused on growth strategies and customer engagement through innovative campaigns."
-  ];
-
-  const sampleLocations = [
-    'San Francisco, CA', 'New York, NY', 'Austin, TX', 'Seattle, WA', 
-    'Los Angeles, CA', 'Chicago, IL', 'Boston, MA', 'Denver, CO', 'Remote'
-  ];
-
-  const fetchUserProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching profile:', error);
-        return null;
-      }
-
-      return data;
-    } catch (error) {
-      console.error('Error in fetchUserProfile:', error);
-      return null;
-    }
-  };
-
-  const createUserProfile = async (user: User, additionalData?: { name?: string; role?: string }) => {
-    try {
-      const randomSkillSet = sampleSkills[Math.floor(Math.random() * sampleSkills.length)];
-      const randomBio = sampleBios[Math.floor(Math.random() * sampleBios.length)];
-      const randomLocation = sampleLocations[Math.floor(Math.random() * sampleLocations.length)];
-      const randomExperience = Math.floor(Math.random() * 8) + 1; // 1-8 years
-
-      const profileData = {
-        id: user.id,
-        email: user.email,
-        phone: user.phone,
-        name: additionalData?.name || user.user_metadata?.name || 'User',
-        role: additionalData?.role || 'user',
-        bio: randomBio,
-        skills: randomSkillSet,
-        location: randomLocation,
-        experience_years: randomExperience,
-        department: additionalData?.role === 'hr' ? 'Human Resources' : 'Engineering'
-      };
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .insert(profileData)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error creating profile:', error);
-        throw error;
-      }
-
-      return data;
-    } catch (error) {
-      console.error('Error in createUserProfile:', error);
-      throw error;
-    }
-  };
-
-  const fetchOrCreateUserProfile = async (user: User, additionalData?: { name?: string; role?: string }) => {
-    let profile = await fetchUserProfile(user.id);
-    
-    if (!profile) {
-      console.log('Profile not found, creating new profile...');
-      profile = await createUserProfile(user, additionalData);
-    }
-    
-    return profile;
-  };
-
-  useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session?.user) {
-          setUser(session.user);
-          const userProfile = await fetchOrCreateUserProfile(session.user);
-          setProfile(userProfile);
-        }
-      } catch (error) {
-        console.error('Error initializing auth:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    initializeAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event, session?.user?.email);
-      
-      if (session?.user) {
-        setUser(session.user);
-        const userProfile = await fetchOrCreateUserProfile(session.user);
-        setProfile(userProfile);
-      } else {
-        setUser(null);
-        setProfile(null);
-      }
-      
-      setIsLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setProfile(null);
-  };
-
-  return (
-    <AuthContext.Provider value={{
-      user,
-      profile,
-      isLoading,
-      logout
-    }}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -191,4 +39,168 @@ export const useAuth = () => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
+};
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.id);
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          // Fetch user profile after auth state change
+          setTimeout(() => {
+            fetchUserProfile(session.user.id);
+          }, 0);
+        } else {
+          setProfile(null);
+        }
+        
+        setIsLoading(false);
+      }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session?.user?.id);
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        fetchUserProfile(session.user.id);
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      console.log('Fetching profile for user:', userId);
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+        if (error.code !== 'PGRST116') { // Not found error
+          throw error;
+        }
+        setProfile(null);
+      } else {
+        console.log('Profile fetched:', data);
+        setProfile(data);
+      }
+    } catch (error) {
+      console.error('Error in fetchUserProfile:', error);
+      setProfile(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const login = async (email: string, password: string) => {
+    setIsLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    
+    if (!error) {
+      // Profile will be fetched in the auth state change handler
+    } else {
+      setIsLoading(false);
+    }
+    
+    return { error };
+  };
+
+  const signup = async (email: string, password: string, profileData?: any) => {
+    setIsLoading(true);
+    
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/dashboard/user`,
+        data: profileData
+      }
+    });
+
+    if (!error && data.user) {
+      // Create profile record
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: data.user.id,
+          email: email,
+          name: profileData?.name || '',
+          location: profileData?.location || '',
+          bio: profileData?.bio || '',
+          skills: profileData?.skills || [],
+          experience_years: profileData?.experience_years || 0,
+          user_type: profileData?.user_type || 'job_seeker'
+        });
+
+      if (profileError) {
+        console.error('Error creating profile:', profileError);
+      }
+    }
+    
+    setIsLoading(false);
+    return { error };
+  };
+
+  const logout = async () => {
+    setIsLoading(true);
+    await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
+    setProfile(null);
+    setIsLoading(false);
+  };
+
+  const updateProfile = async (updates: Partial<Profile>) => {
+    if (!user) return { error: new Error('No user logged in') };
+
+    const { error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', user.id);
+
+    if (!error) {
+      setProfile(prev => prev ? { ...prev, ...updates } : null);
+    }
+
+    return { error };
+  };
+
+  const value = {
+    user,
+    session,
+    profile,
+    isLoading,
+    login,
+    signup,
+    logout,
+    updateProfile,
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 };

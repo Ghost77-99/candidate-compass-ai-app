@@ -351,6 +351,7 @@ export type Database = {
           role: string | null
           skills: string[] | null
           updated_at: string | null
+          user_type: Database["public"]["Enums"]["user_type"] | null
         }
         Insert: {
           bio?: string | null
@@ -368,6 +369,7 @@ export type Database = {
           role?: string | null
           skills?: string[] | null
           updated_at?: string | null
+          user_type?: Database["public"]["Enums"]["user_type"] | null
         }
         Update: {
           bio?: string | null
@@ -385,6 +387,7 @@ export type Database = {
           role?: string | null
           skills?: string[] | null
           updated_at?: string | null
+          user_type?: Database["public"]["Enums"]["user_type"] | null
         }
         Relationships: []
       }
@@ -420,6 +423,7 @@ export type Database = {
       experience_level: "entry" | "mid" | "senior" | "executive"
       job_type: "full_time" | "part_time" | "contract" | "internship"
       user_role: "user" | "hr" | "admin"
+      user_type: "hr" | "job_seeker"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -547,6 +551,7 @@ export const Constants = {
       experience_level: ["entry", "mid", "senior", "executive"],
       job_type: ["full_time", "part_time", "contract", "internship"],
       user_role: ["user", "hr", "admin"],
+      user_type: ["hr", "job_seeker"],
     },
   },
 } as const
