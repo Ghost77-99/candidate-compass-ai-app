@@ -19,8 +19,8 @@ const JobBrowser = () => {
   const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
-  const [experienceFilter, setExperienceFilter] = useState('');
-  const [jobTypeFilter, setJobTypeFilter] = useState('');
+  const [experienceFilter, setExperienceFilter] = useState('all');
+  const [jobTypeFilter, setJobTypeFilter] = useState('all');
   const [activeCategory, setActiveCategory] = useState<'technical' | 'non_technical'>('technical');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [isApplicationModalOpen, setIsApplicationModalOpen] = useState(false);
@@ -81,11 +81,11 @@ const JobBrowser = () => {
       );
     }
     
-    if (experienceFilter) {
+    if (experienceFilter !== 'all') {
       filtered = filtered.filter(job => job.experience_level === experienceFilter);
     }
     
-    if (jobTypeFilter) {
+    if (jobTypeFilter !== 'all') {
       filtered = filtered.filter(job => job.job_type === jobTypeFilter);
     }
     
@@ -171,7 +171,7 @@ const JobBrowser = () => {
                   <SelectValue placeholder="Experience" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Levels</SelectItem>
+                  <SelectItem value="all">All Levels</SelectItem>
                   <SelectItem value="entry">Entry</SelectItem>
                   <SelectItem value="mid">Mid</SelectItem>
                   <SelectItem value="senior">Senior</SelectItem>
@@ -183,7 +183,7 @@ const JobBrowser = () => {
                   <SelectValue placeholder="Job Type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Types</SelectItem>
+                  <SelectItem value="all">All Types</SelectItem>
                   <SelectItem value="full_time">Full Time</SelectItem>
                   <SelectItem value="part_time">Part Time</SelectItem>
                   <SelectItem value="contract">Contract</SelectItem>
