@@ -18,6 +18,7 @@ import HRDashboard from './HRDashboard';
 import AdvancedAnalyticsDashboard from './AdvancedAnalyticsDashboard';
 import CandidateManagement from './CandidateManagement';
 import CandidateSummary from './CandidateSummary';
+import InterviewCalendar from './InterviewCalendar';
 
 const EnhancedHRDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -42,6 +43,12 @@ const EnhancedHRDashboard = () => {
       component: <CandidateManagement />
     },
     {
+      id: 'interviews',
+      label: 'Interviews',
+      icon: <Calendar className="w-4 h-4" />,
+      component: <InterviewCalendar />
+    },
+    {
       id: 'summary',
       label: 'Summary',
       icon: <FileText className="w-4 h-4" />,
@@ -54,7 +61,7 @@ const EnhancedHRDashboard = () => {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="border-b bg-white shadow-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <TabsList className="grid w-full grid-cols-4 lg:w-[500px] h-12">
+            <TabsList className="grid w-full grid-cols-5 lg:w-[600px] h-12">
               {navigationItems.map((item) => (
                 <TabsTrigger 
                   key={item.id} 

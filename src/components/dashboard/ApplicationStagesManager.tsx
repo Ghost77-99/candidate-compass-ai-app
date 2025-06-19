@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -48,6 +47,7 @@ const ApplicationStagesManager: React.FC<ApplicationStagesManagerProps> = ({
   const [stages, setStages] = useState<any[]>([]);
   const [activeStage, setActiveStage] = useState(currentStage);
   const [isLoading, setIsLoading] = useState(true);
+  const [completedStages, setCompletedStages] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -59,6 +59,14 @@ const ApplicationStagesManager: React.FC<ApplicationStagesManagerProps> = ({
     try {
       const stagesData = await applicationStageService.getApplicationStages(applicationId);
       setStages(stagesData);
+      
+      // Track completed stages
+      const completed = new Set(
+        stagesData
+          .filter(stage => stage.status === 'completed')
+          .map(stage => stage.stage_name)
+      );
+      setCompletedStages(completed);
     } catch (error) {
       console.error('Error loading stages:', error);
       toast({
@@ -77,6 +85,9 @@ const ApplicationStagesManager: React.FC<ApplicationStagesManagerProps> = ({
         status: 'completed',
         score: score
       });
+
+      // Update completed stages
+      setCompletedStages(prev => new Set([...prev, stageName]));
 
       // Move to next stage
       const currentIndex = STAGE_ORDER.indexOf(stageName);
@@ -107,16 +118,19 @@ const ApplicationStagesManager: React.FC<ApplicationStagesManagerProps> = ({
     return stages.find(stage => stage.stage_name === stageName);
   };
 
-  const isStageAccessible = (stageName: string) => {
-    const currentIndex = STAGE_ORDER.indexOf(activeStage);
-    const stageIndex = STAGE_ORDER.indexOf(stageName);
-    return stageIndex <= currentIndex;
+  const isStageCompleted = (stageName: string) => {
+    return completedStages.has(stageName);
+  };
+
+  const canAccessStage = (stageName: string) => {
+    // Allow access to all stages for demo purposes
+    return true;
   };
 
   const renderStageComponent = (stageName: string) => {
     const stageStatus = getStageStatus(stageName);
-    const isCompleted = stageStatus?.status === 'completed';
-    const isAccessible = isStageAccessible(stageName);
+    const isCompleted = isStageCompleted(stageName);
+    const isAccessible = canAccessStage(stageName);
 
     if (!isAccessible) {
       return (
@@ -132,6 +146,23 @@ const ApplicationStagesManager: React.FC<ApplicationStagesManagerProps> = ({
       );
     }
 
+    if (isCompleted) {
+      return (
+        <Card className="border-green-200 bg-green-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              {STAGE_LABELS[stageName as keyof typeof STAGE_LABELS]} - Completed
+            </CardTitle>
+            <CardDescription className="text-green-700">
+              You have successfully completed this stage
+              {stageStatus?.score && ` with a score of ${stageStatus.score}%`}
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      );
+    }
+
     switch (stageName) {
       case 'resume_upload':
         return (
@@ -139,7 +170,7 @@ const ApplicationStagesManager: React.FC<ApplicationStagesManagerProps> = ({
             userId={user?.id || ''}
             applicationId={applicationId}
             onUploadComplete={(resumeUrl: string, summary?: string, score?: number) => 
-              handleStageComplete(stageName, score || 0)
+              handleStageComplete(stageName, score || 85)
             }
             showQualificationCheck={true}
           />
@@ -207,6 +238,26 @@ const ApplicationStagesManager: React.FC<ApplicationStagesManagerProps> = ({
           </div>
         ))}
       </div>
+
+      {/* Stage Navigation */}
+      <Card className="bg-blue-50 border-blue-200">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-medium text-blue-900">Application Progress</h4>
+              <p className="text-sm text-blue-700">
+                Complete each stage to move forward in the hiring process
+              </p>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-blue-600">
+                {completedStages.size}/{STAGE_ORDER.length}
+              </div>
+              <div className="text-sm text-blue-600">Stages Completed</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

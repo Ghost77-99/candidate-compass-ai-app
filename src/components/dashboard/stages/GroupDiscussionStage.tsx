@@ -1,11 +1,10 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Users, Clock, CheckCircle } from 'lucide-react';
+import { Users, Clock, CheckCircle, ArrowRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface GroupDiscussionStageProps {
@@ -21,6 +20,7 @@ const GroupDiscussionStage: React.FC<GroupDiscussionStageProps> = ({ onComplete,
     conclusion: ''
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [showDemo, setShowDemo] = useState(true);
   const { toast } = useToast();
 
   const timeSlots = [
@@ -54,16 +54,74 @@ const GroupDiscussionStage: React.FC<GroupDiscussionStageProps> = ({ onComplete,
     }, 2000);
   };
 
+  const handleDemoComplete = () => {
+    setShowDemo(false);
+    const demoScore = 88;
+    toast({
+      title: "Demo Group Discussion Completed",
+      description: `Demo completed with ${demoScore}% score`,
+    });
+    onComplete(demoScore);
+  };
+
   if (isCompleted) {
     return (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CheckCircle className="w-5 h-5 text-green-600" />
-            Group Discussion - Scheduled
+            Group Discussion - Completed
           </CardTitle>
-          <CardDescription>You have successfully registered for the group discussion</CardDescription>
+          <CardDescription>You have successfully completed the group discussion</CardDescription>
         </CardHeader>
+      </Card>
+    );
+  }
+
+  if (showDemo) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="w-5 h-5" />
+            Group Discussion
+          </CardTitle>
+          <CardDescription>
+            Participate in a group discussion to showcase your communication and teamwork skills.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h4 className="font-semibold mb-2">Sample Discussion Topic:</h4>
+              <p className="mb-3">"Remote Work vs Office Work: Which is more effective for productivity?"</p>
+              
+              <div className="space-y-2 text-sm">
+                <div className="bg-white p-3 rounded border-l-4 border-blue-500">
+                  <strong>Your Role:</strong> Present balanced arguments and listen to others' viewpoints
+                </div>
+                <div className="bg-white p-3 rounded border-l-4 border-green-500">
+                  <strong>Key Skills Evaluated:</strong> Communication, Leadership, Teamwork, Critical Thinking
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-green-50 p-4 rounded-lg">
+              <h4 className="font-semibold mb-2 text-green-800">Discussion Guidelines:</h4>
+              <ul className="list-disc list-inside space-y-1 text-sm text-green-700">
+                <li>Be respectful and listen to others' viewpoints</li>
+                <li>Contribute meaningfully to the discussion</li>
+                <li>Support your arguments with relevant examples</li>
+                <li>Maintain professional communication throughout</li>
+              </ul>
+            </div>
+
+            <Button onClick={handleDemoComplete} className="w-full flex items-center gap-2">
+              Complete Demo Discussion
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </CardContent>
       </Card>
     );
   }

@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { Brain, CheckCircle } from 'lucide-react';
+import { Brain, CheckCircle, ArrowRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface PersonalityQuestion {
@@ -68,36 +67,6 @@ const questions: PersonalityQuestion[] = [
       "Achieving recognition and career advancement",
       "Creating innovative solutions and products"
     ]
-  },
-  {
-    id: 6,
-    question: "How do you prefer to receive feedback?",
-    options: [
-      "Direct and specific feedback immediately",
-      "Regular one-on-one discussions",
-      "Written feedback with time to process",
-      "Group feedback sessions with peers"
-    ]
-  },
-  {
-    id: 7,
-    question: "When learning new skills, you prefer to:",
-    options: [
-      "Take structured courses or training",
-      "Learn by doing and experimenting",
-      "Study documentation and best practices",
-      "Learn from mentors and colleagues"
-    ]
-  },
-  {
-    id: 8,
-    question: "How do you handle workplace conflicts?",
-    options: [
-      "Address issues directly and immediately",
-      "Seek mediation from a neutral party",
-      "Focus on finding common ground",
-      "Avoid confrontation when possible"
-    ]
   }
 ];
 
@@ -105,6 +74,7 @@ const PersonalityTestStage: React.FC<PersonalityTestStageProps> = ({ onComplete,
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [isStarted, setIsStarted] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [showDemo, setShowDemo] = useState(true);
   const { toast } = useToast();
 
   const handleAnswerChange = (questionId: number, answerIndex: number) => {
@@ -131,6 +101,16 @@ const PersonalityTestStage: React.FC<PersonalityTestStageProps> = ({ onComplete,
     }, 2000);
   };
 
+  const handleDemoComplete = () => {
+    setShowDemo(false);
+    const demoScore = 96;
+    toast({
+      title: "Demo Personality Test Completed",
+      description: `Demo completed with ${demoScore}% score`,
+    });
+    onComplete(demoScore);
+  };
+
   if (isCompleted) {
     return (
       <Card>
@@ -141,6 +121,63 @@ const PersonalityTestStage: React.FC<PersonalityTestStageProps> = ({ onComplete,
           </CardTitle>
           <CardDescription>You have successfully completed the personality assessment</CardDescription>
         </CardHeader>
+      </Card>
+    );
+  }
+
+  if (showDemo) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Brain className="w-5 h-5" />
+            Personality Assessment
+          </CardTitle>
+          <CardDescription>
+            This assessment helps us understand your work style and personality traits.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h4 className="font-semibold mb-2">Sample Question:</h4>
+              <p className="mb-3">How do you prefer to work on projects?</p>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 rounded-full border-2 border-gray-300"></div>
+                  <span>Independently with minimal supervision</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 rounded-full bg-blue-600 border-2 border-blue-600"></div>
+                  <span className="font-medium">In a small team with close collaboration ✓</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 rounded-full border-2 border-gray-300"></div>
+                  <span>In a large team with clear role divisions</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 rounded-full border-2 border-gray-300"></div>
+                  <span>Flexibly, adapting to project needs</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-green-50 p-4 rounded-lg">
+              <h4 className="font-semibold mb-2 text-green-800">Assessment Guidelines:</h4>
+              <ul className="list-disc list-inside space-y-1 text-sm text-green-700">
+                <li>Answer honestly - there are no right or wrong answers</li>
+                <li>Choose the option that best describes you</li>
+                <li>Consider your typical behavior, not ideal behavior</li>
+                <li>Take your time - there's no time limit</li>
+              </ul>
+            </div>
+
+            <Button onClick={handleDemoComplete} className="w-full flex items-center gap-2">
+              Complete Demo Personality Test
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </CardContent>
       </Card>
     );
   }

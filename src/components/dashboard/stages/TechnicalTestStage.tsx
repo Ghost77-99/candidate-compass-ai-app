@@ -1,11 +1,10 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Code, Clock, CheckCircle } from 'lucide-react';
+import { Code, Clock, CheckCircle, ArrowRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface TechnicalQuestion {
@@ -65,6 +64,7 @@ const TechnicalTestStage: React.FC<TechnicalTestStageProps> = ({ onComplete, isC
   const [timeLeft, setTimeLeft] = useState(1800); // 30 minutes
   const [isStarted, setIsStarted] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [showDemo, setShowDemo] = useState(true);
   const { toast } = useToast();
 
   React.useEffect(() => {
@@ -113,6 +113,16 @@ const TechnicalTestStage: React.FC<TechnicalTestStageProps> = ({ onComplete, isC
     }, 2000);
   };
 
+  const handleDemoComplete = () => {
+    setShowDemo(false);
+    const demoScore = 92;
+    toast({
+      title: "Demo Technical Test Completed",
+      description: `Demo completed with ${demoScore}% score`,
+    });
+    onComplete(demoScore);
+  };
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -129,6 +139,73 @@ const TechnicalTestStage: React.FC<TechnicalTestStageProps> = ({ onComplete, isC
           </CardTitle>
           <CardDescription>You have successfully completed the technical assessment</CardDescription>
         </CardHeader>
+      </Card>
+    );
+  }
+
+  if (showDemo) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Code className="w-5 h-5" />
+            Technical Test
+          </CardTitle>
+          <CardDescription>
+            This technical assessment includes both multiple choice and coding questions.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h4 className="font-semibold mb-2">Sample Question:</h4>
+              <p className="mb-3">What is the time complexity of binary search?</p>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 rounded-full border-2 border-gray-300"></div>
+                  <span>O(n)</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 rounded-full bg-blue-600 border-2 border-blue-600"></div>
+                  <span className="font-medium">O(log n) ✓</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 rounded-full border-2 border-gray-300"></div>
+                  <span>O(n log n)</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 rounded-full border-2 border-gray-300"></div>
+                  <span>O(1)</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h4 className="font-semibold mb-2">Sample Coding Question:</h4>
+              <p className="mb-3">Write a function to reverse a string in JavaScript:</p>
+              <div className="bg-gray-800 text-green-400 p-3 rounded font-mono text-sm">
+                <div>function reverseString(str) &#123;</div>
+                <div>&nbsp;&nbsp;return str.split('').reverse().join('');</div>
+                <div>&#125;</div>
+              </div>
+            </div>
+            
+            <div className="bg-green-50 p-4 rounded-lg">
+              <h4 className="font-semibold mb-2 text-green-800">Test Instructions:</h4>
+              <ul className="list-disc list-inside space-y-1 text-sm text-green-700">
+                <li>Mix of multiple choice and coding questions</li>
+                <li>30 minutes total time limit</li>
+                <li>Code questions require working solutions</li>
+                <li>You can use any programming language for coding questions</li>
+              </ul>
+            </div>
+
+            <Button onClick={handleDemoComplete} className="w-full flex items-center gap-2">
+              Complete Demo Technical Test
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </CardContent>
       </Card>
     );
   }

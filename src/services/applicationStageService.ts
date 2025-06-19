@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface ApplicationStage {
@@ -47,13 +46,49 @@ export const applicationStageService = {
       updateData.completed_at = new Date().toISOString();
     }
 
-    const { data, error } = await supabase
+    // First, try to update existing stage
+    const { data: existingStage, error: fetchError } = await supabase
       .from('application_stages')
-      .update(updateData)
+      .select('*')
       .eq('application_id', applicationId)
       .eq('stage_name', stageName)
-      .select()
-      .single();
+      .maybeSingle();
+
+    if (fetchError && fetchError.code !== 'PGRST116') {
+      console.error('Error fetching existing stage:', fetchError);
+      throw fetchError;
+    }
+
+    let data;
+    let error;
+
+    if (existingStage) {
+      // Update existing stage
+      const result = await supabase
+        .from('application_stages')
+        .update(updateData)
+        .eq('application_id', applicationId)
+        .eq('stage_name', stageName)
+        .select()
+        .single();
+      
+      data = result.data;
+      error = result.error;
+    } else {
+      // Create new stage
+      const result = await supabase
+        .from('application_stages')
+        .insert({
+          application_id: applicationId,
+          stage_name: stageName,
+          ...updateData
+        })
+        .select()
+        .single();
+      
+      data = result.data;
+      error = result.error;
+    }
 
     if (error) {
       console.error('Error updating stage status:', error);
@@ -69,10 +104,16 @@ export const applicationStageService = {
       const currentIndex = stageOrder.indexOf(stageName);
       const nextStage = stageOrder[currentIndex + 1];
 
+      // Calculate progress percentage
+      const completedStages = currentIndex + 1;
+      const progressPercentage = Math.round((completedStages / stageOrder.length) * 100);
+
       await supabase
         .from('applications')
         .update({
           current_stage: nextStage || 'completed',
+          progress_percentage: progressPercentage,
+          status: nextStage ? 'in_progress' : 'completed',
           updated_at: new Date().toISOString()
         })
         .eq('id', applicationId);

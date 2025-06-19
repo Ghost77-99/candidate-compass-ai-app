@@ -1,11 +1,10 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Calendar, Clock, CheckCircle, User } from 'lucide-react';
+import { Calendar, Clock, CheckCircle, User, ArrowRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface HRRoundStageProps {
@@ -22,6 +21,7 @@ const HRRoundStage: React.FC<HRRoundStageProps> = ({ onComplete, isCompleted }) 
     availability: ''
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [showDemo, setShowDemo] = useState(true);
   const { toast } = useToast();
 
   const interviewSlots = [
@@ -56,16 +56,75 @@ const HRRoundStage: React.FC<HRRoundStageProps> = ({ onComplete, isCompleted }) 
     }, 2000);
   };
 
+  const handleDemoComplete = () => {
+    setShowDemo(false);
+    const demoScore = 94;
+    toast({
+      title: "Demo HR Round Completed",
+      description: `Demo completed with ${demoScore}% score`,
+    });
+    onComplete(demoScore);
+  };
+
   if (isCompleted) {
     return (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CheckCircle className="w-5 h-5 text-green-600" />
-            HR Round - Scheduled
+            HR Round - Completed
           </CardTitle>
-          <CardDescription>Your HR interview has been successfully scheduled</CardDescription>
+          <CardDescription>Your HR interview has been successfully completed</CardDescription>
         </CardHeader>
+      </Card>
+    );
+  }
+
+  if (showDemo) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="w-5 h-5" />
+            HR Round Interview
+          </CardTitle>
+          <CardDescription>
+            Final interview with HR to discuss your fit for the role and company culture.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h4 className="font-semibold mb-2">Sample HR Questions:</h4>
+              <div className="space-y-2 text-sm">
+                <div className="bg-white p-3 rounded border-l-4 border-blue-500">
+                  <strong>Q:</strong> Why are you interested in this position?
+                </div>
+                <div className="bg-white p-3 rounded border-l-4 border-green-500">
+                  <strong>Q:</strong> Tell us about your career goals and how this role fits in.
+                </div>
+                <div className="bg-white p-3 rounded border-l-4 border-purple-500">
+                  <strong>Q:</strong> What are your salary expectations?
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-green-50 p-4 rounded-lg">
+              <h4 className="font-semibold mb-2 text-green-800">Interview Preparation Tips:</h4>
+              <ul className="list-disc list-inside space-y-1 text-sm text-green-700">
+                <li>Review the job description and company information</li>
+                <li>Prepare examples of your achievements and problem-solving skills</li>
+                <li>Think about questions you'd like to ask about the role and company</li>
+                <li>Be ready to discuss your career aspirations</li>
+              </ul>
+            </div>
+
+            <Button onClick={handleDemoComplete} className="w-full flex items-center gap-2">
+              Complete Demo HR Round
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </CardContent>
       </Card>
     );
   }

@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { Clock, CheckCircle } from 'lucide-react';
+import { Clock, CheckCircle, ArrowRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Question {
@@ -57,6 +56,7 @@ const AptitudeTestStage: React.FC<AptitudeTestStageProps> = ({ onComplete, isCom
   const [timeLeft, setTimeLeft] = useState(900); // 15 minutes
   const [isStarted, setIsStarted] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [showDemo, setShowDemo] = useState(true);
   const { toast } = useToast();
 
   React.useEffect(() => {
@@ -96,6 +96,17 @@ const AptitudeTestStage: React.FC<AptitudeTestStageProps> = ({ onComplete, isCom
     }, 2000);
   };
 
+  const handleDemoComplete = () => {
+    setShowDemo(false);
+    // Simulate completing the test with a good score
+    const demoScore = 85;
+    toast({
+      title: "Demo Test Completed",
+      description: `Demo completed with ${demoScore}% score`,
+    });
+    onComplete(demoScore);
+  };
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -112,6 +123,60 @@ const AptitudeTestStage: React.FC<AptitudeTestStageProps> = ({ onComplete, isCom
           </CardTitle>
           <CardDescription>You have successfully completed the aptitude test</CardDescription>
         </CardHeader>
+      </Card>
+    );
+  }
+
+  if (showDemo) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Aptitude Test</CardTitle>
+          <CardDescription>
+            This is a sample aptitude test with logical reasoning and mathematical questions.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h4 className="font-semibold mb-2">Sample Question:</h4>
+              <p className="mb-3">If a train travels 120 miles in 2 hours, what is its average speed?</p>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 rounded-full border-2 border-gray-300"></div>
+                  <span>50 mph</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 rounded-full bg-blue-600 border-2 border-blue-600"></div>
+                  <span className="font-medium">60 mph ✓</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 rounded-full border-2 border-gray-300"></div>
+                  <span>70 mph</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 rounded-full border-2 border-gray-300"></div>
+                  <span>80 mph</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-green-50 p-4 rounded-lg">
+              <h4 className="font-semibold mb-2 text-green-800">Test Instructions:</h4>
+              <ul className="list-disc list-inside space-y-1 text-sm text-green-700">
+                <li>You have 15 minutes to complete 5 questions</li>
+                <li>Each question carries equal marks</li>
+                <li>Choose the best answer for each question</li>
+                <li>Submit before time runs out</li>
+              </ul>
+            </div>
+
+            <Button onClick={handleDemoComplete} className="w-full flex items-center gap-2">
+              Complete Demo Test
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </CardContent>
       </Card>
     );
   }
