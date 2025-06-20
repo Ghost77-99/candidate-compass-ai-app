@@ -57,6 +57,7 @@ const ApplicationStagesManager: React.FC<ApplicationStagesManagerProps> = ({
 
   const loadStages = async () => {
     try {
+      setIsLoading(true);
       const stagesData = await applicationStageService.getApplicationStages(applicationId);
       setStages(stagesData);
       
@@ -79,11 +80,15 @@ const ApplicationStagesManager: React.FC<ApplicationStagesManagerProps> = ({
     }
   };
 
-  const handleStageComplete = async (stageName: string, score: number) => {
+  const handleStageComplete = async (stageName: string, score: number, data?: any) => {
     try {
+      console.log(`Completing stage: ${stageName} with score: ${score}`);
+      
+      // Update stage in database
       await applicationStageService.updateStageStatus(applicationId, stageName, {
         status: 'completed',
-        score: score
+        score: score,
+        feedback: data?.feedback || `${stageName} completed successfully`
       });
 
       // Update completed stages
@@ -97,18 +102,21 @@ const ApplicationStagesManager: React.FC<ApplicationStagesManagerProps> = ({
         setActiveStage(nextStage);
       }
 
+      // Reload stages to get updated data
       await loadStages();
+      
+      // Notify parent component
       onStageComplete();
 
       toast({
         title: "Stage Completed",
-        description: `${STAGE_LABELS[stageName as keyof typeof STAGE_LABELS]} completed successfully!`,
+        description: `${STAGE_LABELS[stageName as keyof typeof STAGE_LABELS]} completed successfully with ${score}% score!`,
       });
     } catch (error) {
       console.error('Error completing stage:', error);
       toast({
         title: "Error",
-        description: "Failed to complete stage",
+        description: "Failed to complete stage. Please try again.",
         variant: "destructive",
       });
     }
@@ -170,7 +178,7 @@ const ApplicationStagesManager: React.FC<ApplicationStagesManagerProps> = ({
             userId={user?.id || ''}
             applicationId={applicationId}
             onUploadComplete={(resumeUrl: string, summary?: string, score?: number) => 
-              handleStageComplete(stageName, score || 85)
+              handleStageComplete(stageName, score || 85, { resumeUrl, summary })
             }
             showQualificationCheck={true}
           />
@@ -180,6 +188,7 @@ const ApplicationStagesManager: React.FC<ApplicationStagesManagerProps> = ({
           <AptitudeTestStage
             onComplete={(score) => handleStageComplete(stageName, score)}
             isCompleted={isCompleted}
+            applicationId={applicationId}
           />
         );
       case 'group_discussion':
@@ -187,6 +196,7 @@ const ApplicationStagesManager: React.FC<ApplicationStagesManagerProps> = ({
           <GroupDiscussionStage
             onComplete={(score) => handleStageComplete(stageName, score)}
             isCompleted={isCompleted}
+            applicationId={applicationId}
           />
         );
       case 'technical_test':
@@ -194,6 +204,7 @@ const ApplicationStagesManager: React.FC<ApplicationStagesManagerProps> = ({
           <TechnicalTestStage
             onComplete={(score) => handleStageComplete(stageName, score)}
             isCompleted={isCompleted}
+            applicationId={applicationId}
           />
         );
       case 'hr_round':
@@ -201,6 +212,7 @@ const ApplicationStagesManager: React.FC<ApplicationStagesManagerProps> = ({
           <HRRoundStage
             onComplete={(score) => handleStageComplete(stageName, score)}
             isCompleted={isCompleted}
+            applicationId={applicationId}
           />
         );
       case 'personality_test':
@@ -208,6 +220,7 @@ const ApplicationStagesManager: React.FC<ApplicationStagesManagerProps> = ({
           <PersonalityTestStage
             onComplete={(score) => handleStageComplete(stageName, score)}
             isCompleted={isCompleted}
+            applicationId={applicationId}
           />
         );
       default:

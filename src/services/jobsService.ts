@@ -31,75 +31,155 @@ export interface Application {
   next_interview_stage?: string;
   cover_letter?: string;
   notes?: string;
+  current_stage: string;
+  qualification_score: number;
+  resume_summary?: string;
 }
 
 export const jobsService = {
   async getActiveJobs() {
-    const { data, error } = await supabase
-      .from('jobs')
-      .select('*')
-      .eq('is_active', true)
-      .order('posted_date', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('jobs')
+        .select('*')
+        .eq('is_active', true)
+        .order('posted_date', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching jobs:', error);
+      if (error) {
+        console.error('Error fetching jobs:', error);
+        throw error;
+      }
+
+      return data as Job[];
+    } catch (error) {
+      console.error('Error in getActiveJobs:', error);
       throw error;
     }
-
-    return data as Job[];
   },
 
   async getUserApplications(userId: string) {
-    const { data, error } = await supabase
-      .from('applications')
-      .select(`
-        *,
-        jobs:job_id (
-          title,
-          company
-        )
-      `)
-      .eq('user_id', userId)
-      .order('applied_date', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('applications')
+        .select(`
+          *,
+          jobs:job_id (
+            title,
+            company,
+            location
+          )
+        `)
+        .eq('user_id', userId)
+        .order('applied_date', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching applications:', error);
+      if (error) {
+        console.error('Error fetching applications:', error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error in getUserApplications:', error);
       throw error;
     }
-
-    return data;
   },
 
   async applyToJob(jobId: string, userId: string, coverLetter?: string) {
-    // Check if user has already applied to this job
-    const { data: existingApplication } = await supabase
-      .from('applications')
-      .select('id')
-      .eq('job_id', jobId)
-      .eq('user_id', userId)
-      .maybeSingle();
+    try {
+      console.log('Applying to job:', { jobId, userId, coverLetter });
 
-    if (existingApplication) {
-      throw new Error('You have already applied to this job');
-    }
+      // Check if user has already applied to this job
+      const { data: existingApplication, error: checkError } = await supabase
+        .from('applications')
+        .select('id')
+        .eq('job_id', jobId)
+        .eq('user_id', userId)
+        .maybeSingle();
 
-    const { data, error } = await supabase
-      .from('applications')
-      .insert({
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('Error checking existing application:', checkError);
+        throw checkError;
+      }
+
+      if (existingApplication) {
+        throw new Error('You have already applied to this job');
+      }
+
+      // Create new application
+      const applicationData = {
         job_id: jobId,
         user_id: userId,
-        status: 'applied',
+        status: 'applied' as const,
         progress_percentage: 10,
-        cover_letter: coverLetter
-      })
-      .select()
-      .single();
+        current_stage: 'resume_upload',
+        qualification_score: 0,
+        cover_letter: coverLetter || null,
+        applied_date: new Date().toISOString().split('T')[0]
+      };
 
-    if (error) {
-      console.error('Error applying to job:', error);
+      console.log('Creating application with data:', applicationData);
+
+      const { data, error } = await supabase
+        .from('applications')
+        .insert(applicationData)
+        .select(`
+          *,
+          jobs:job_id (
+            title,
+            company,
+            location
+          )
+        `)
+        .single();
+
+      if (error) {
+        console.error('Error creating application:', error);
+        throw error;
+      }
+
+      console.log('Application created successfully:', data);
+
+      // Initialize application stages
+      await this.initializeApplicationStages(data.id);
+
+      return data;
+    } catch (error) {
+      console.error('Error in applyToJob:', error);
       throw error;
     }
+  },
 
-    return data;
+  async initializeApplicationStages(applicationId: string) {
+    try {
+      const stages = [
+        'resume_upload',
+        'aptitude_test',
+        'group_discussion',
+        'technical_test',
+        'hr_round',
+        'personality_test'
+      ];
+
+      const stageData = stages.map(stageName => ({
+        application_id: applicationId,
+        stage_name: stageName,
+        status: 'pending' as const,
+        score: 0
+      }));
+
+      const { error } = await supabase
+        .from('application_stages')
+        .insert(stageData);
+
+      if (error) {
+        console.error('Error initializing stages:', error);
+        throw error;
+      }
+
+      console.log('Application stages initialized successfully');
+    } catch (error) {
+      console.error('Error in initializeApplicationStages:', error);
+      throw error;
+    }
   }
 };

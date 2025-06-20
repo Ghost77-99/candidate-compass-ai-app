@@ -5,6 +5,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Clock, CheckCircle, ArrowRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { applicationStageService } from '@/services/applicationStageService';
 
 interface Question {
   id: number;
@@ -16,6 +17,7 @@ interface Question {
 interface AptitudeTestStageProps {
   onComplete: (score: number) => void;
   isCompleted: boolean;
+  applicationId: string;
 }
 
 const questions: Question[] = [
@@ -51,7 +53,7 @@ const questions: Question[] = [
   }
 ];
 
-const AptitudeTestStage: React.FC<AptitudeTestStageProps> = ({ onComplete, isCompleted }) => {
+const AptitudeTestStage: React.FC<AptitudeTestStageProps> = ({ onComplete, isCompleted, applicationId }) => {
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [timeLeft, setTimeLeft] = useState(900); // 15 minutes
   const [isStarted, setIsStarted] = useState(false);
@@ -82,29 +84,61 @@ const AptitudeTestStage: React.FC<AptitudeTestStageProps> = ({ onComplete, isCom
     return Math.round((correct / questions.length) * 100);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const score = calculateScore();
     setIsSubmitted(true);
     
-    toast({
-      title: "Test Submitted",
-      description: `You scored ${score}%`,
-    });
+    try {
+      // Save to database
+      await applicationStageService.updateStageStatus(applicationId, 'aptitude_test', {
+        status: 'completed',
+        score: score,
+        feedback: `Aptitude test completed with ${score}% score`
+      });
 
-    setTimeout(() => {
-      onComplete(score);
-    }, 2000);
+      toast({
+        title: "Test Submitted",
+        description: `You scored ${score}%`,
+      });
+
+      setTimeout(() => {
+        onComplete(score);
+      }, 2000);
+    } catch (error) {
+      console.error('Error saving aptitude test:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save test results",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleDemoComplete = () => {
+  const handleDemoComplete = async () => {
     setShowDemo(false);
-    // Simulate completing the test with a good score
     const demoScore = 85;
-    toast({
-      title: "Demo Test Completed",
-      description: `Demo completed with ${demoScore}% score`,
-    });
-    onComplete(demoScore);
+    
+    try {
+      await applicationStageService.updateStageStatus(applicationId, 'aptitude_test', {
+        status: 'completed',
+        score: demoScore,
+        feedback: `Demo aptitude test completed with ${demoScore}% score`
+      });
+
+      toast({
+        title: "Demo Test Completed",
+        description: `Demo completed with ${demoScore}% score`,
+      });
+      
+      onComplete(demoScore);
+    } catch (error) {
+      console.error('Error saving demo test:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save demo results",
+        variant: "destructive",
+      });
+    }
   };
 
   const formatTime = (seconds: number) => {

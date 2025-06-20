@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -33,11 +32,22 @@ const JobApplicationModal: React.FC<JobApplicationModalProps> = ({
   const { toast } = useToast();
 
   const handleSubmit = async () => {
-    if (!job || !user) return;
+    if (!job || !user) {
+      toast({
+        title: "Error",
+        description: "Please make sure you are logged in and a job is selected.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setIsSubmitting(true);
     try {
-      await jobsService.applyToJob(job.id, user.id, coverLetter);
+      console.log('Submitting application for job:', job.id, 'user:', user.id);
+      
+      const application = await jobsService.applyToJob(job.id, user.id, coverLetter);
+      
+      console.log('Application submitted successfully:', application);
       
       toast({
         title: "Application Submitted!",
@@ -48,6 +58,7 @@ const JobApplicationModal: React.FC<JobApplicationModalProps> = ({
       onClose();
       onApplicationSubmitted();
     } catch (error: any) {
+      console.error('Application submission error:', error);
       toast({
         title: "Application Failed",
         description: error.message || "There was an error submitting your application. Please try again.",

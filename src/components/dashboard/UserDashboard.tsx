@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -56,12 +55,17 @@ const UserDashboard = () => {
     
     setIsLoadingData(true);
     try {
+      console.log('Loading dashboard data for user:', user.id);
+      
       const [jobsData, applicationsData] = await Promise.all([
         jobsService.getActiveJobs(),
         jobsService.getUserApplications(user.id)
       ]);
       
-      setJobs(jobsData.slice(0, 3));
+      console.log('Jobs loaded:', jobsData?.length || 0);
+      console.log('Applications loaded:', applicationsData?.length || 0);
+      
+      setJobs(jobsData?.slice(0, 3) || []);
       setApplications(applicationsData || []);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -76,15 +80,22 @@ const UserDashboard = () => {
   };
 
   const handleApplyClick = (job: Job) => {
+    console.log('Apply clicked for job:', job.id);
     setSelectedJob(job);
     setIsApplicationModalOpen(true);
   };
 
   const handleApplicationSubmitted = () => {
+    console.log('Application submitted, reloading data...');
     loadDashboardData();
+    toast({
+      title: "Success",
+      description: "Application submitted successfully! You can now track your progress in the Application Stages tab.",
+    });
   };
 
   const handleViewStages = (application: any) => {
+    console.log('Viewing stages for application:', application.id);
     setSelectedApplication(application);
     setActiveTab('stages');
   };
@@ -314,13 +325,33 @@ const UserDashboard = () => {
                     currentStage={selectedApplication.current_stage}
                     onStageComplete={loadDashboardData}
                   />
+                ) : applications.length > 0 ? (
+                  <div className="space-y-4">
+                    <p className="text-gray-600 mb-4">Select an application to view and complete stages:</p>
+                    {applications.map((app) => (
+                      <Card key={app.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelectedApplication(app)}>
+                        <CardContent className="p-4">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <h4 className="font-medium">{app.jobs?.title}</h4>
+                              <p className="text-sm text-gray-600">{app.jobs?.company}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-medium">{app.progress_percentage}% Complete</p>
+                              <p className="text-xs text-gray-500">Current: {app.current_stage?.replace('_', ' ')}</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
                 ) : (
                   <div className="text-center py-16">
                     <ClipboardList className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No Application Selected</h3>
-                    <p className="text-gray-600 mb-6">Select an application from your applications list to view and complete stages</p>
-                    <Button onClick={() => setActiveTab('applications')}>
-                      View My Applications
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No Applications to Track</h3>
+                    <p className="text-gray-600 mb-6">Apply to jobs first to access the application stages</p>
+                    <Button onClick={() => setActiveTab('jobs')}>
+                      Browse Jobs
                     </Button>
                   </div>
                 )}
