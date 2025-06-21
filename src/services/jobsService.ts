@@ -39,6 +39,7 @@ export interface Application {
 export const jobsService = {
   async getActiveJobs() {
     try {
+      console.log('Fetching active jobs...');
       const { data, error } = await supabase
         .from('jobs')
         .select('*')
@@ -47,9 +48,10 @@ export const jobsService = {
 
       if (error) {
         console.error('Error fetching jobs:', error);
-        throw error;
+        throw new Error(`Failed to fetch jobs: ${error.message}`);
       }
 
+      console.log('Jobs fetched successfully:', data?.length || 0);
       return data as Job[];
     } catch (error) {
       console.error('Error in getActiveJobs:', error);
@@ -57,8 +59,48 @@ export const jobsService = {
     }
   },
 
+  async createJob(jobData: Partial<Job>) {
+    try {
+      console.log('Creating job with data:', jobData);
+      
+      const { data, error } = await supabase
+        .from('jobs')
+        .insert({
+          title: jobData.title,
+          company: jobData.company,
+          description: jobData.description,
+          location: jobData.location,
+          job_type: jobData.job_type || 'full_time',
+          experience_level: jobData.experience_level || 'entry',
+          job_category: jobData.job_category || 'technical',
+          applicant_level: jobData.applicant_level,
+          salary_min: jobData.salary_min,
+          salary_max: jobData.salary_max,
+          required_skills: jobData.required_skills || [],
+          application_deadline: jobData.application_deadline,
+          posted_by: jobData.posted_by,
+          is_active: true,
+          posted_date: new Date().toISOString().split('T')[0]
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating job:', error);
+        throw new Error(`Failed to create job: ${error.message}`);
+      }
+
+      console.log('Job created successfully:', data);
+      return data as Job;
+    } catch (error) {
+      console.error('Error in createJob:', error);
+      throw error;
+    }
+  },
+
   async getUserApplications(userId: string) {
     try {
+      console.log('Fetching applications for user:', userId);
       const { data, error } = await supabase
         .from('applications')
         .select(`
@@ -74,9 +116,10 @@ export const jobsService = {
 
       if (error) {
         console.error('Error fetching applications:', error);
-        throw error;
+        throw new Error(`Failed to fetch applications: ${error.message}`);
       }
 
+      console.log('Applications fetched successfully:', data?.length || 0);
       return data;
     } catch (error) {
       console.error('Error in getUserApplications:', error);
@@ -98,7 +141,7 @@ export const jobsService = {
 
       if (checkError && checkError.code !== 'PGRST116') {
         console.error('Error checking existing application:', checkError);
-        throw checkError;
+        throw new Error(`Failed to check existing application: ${checkError.message}`);
       }
 
       if (existingApplication) {
@@ -134,7 +177,7 @@ export const jobsService = {
 
       if (error) {
         console.error('Error creating application:', error);
-        throw error;
+        throw new Error(`Failed to create application: ${error.message}`);
       }
 
       console.log('Application created successfully:', data);
@@ -151,6 +194,8 @@ export const jobsService = {
 
   async initializeApplicationStages(applicationId: string) {
     try {
+      console.log('Initializing stages for application:', applicationId);
+      
       const stages = [
         'resume_upload',
         'aptitude_test',
@@ -173,7 +218,7 @@ export const jobsService = {
 
       if (error) {
         console.error('Error initializing stages:', error);
-        throw error;
+        throw new Error(`Failed to initialize stages: ${error.message}`);
       }
 
       console.log('Application stages initialized successfully');

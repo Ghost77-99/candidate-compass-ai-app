@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Badge } from '@/components/ui/badge';
 import { X, Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { jobsService } from '@/services/jobsService';
 import { useToast } from '@/hooks/use-toast';
 
 interface JobCreationModalProps {
@@ -57,39 +56,55 @@ const JobCreationModal: React.FC<JobCreationModalProps> = ({ isOpen, onClose, on
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to create a job",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.title || !formData.company || !formData.description || !formData.location) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setIsSubmitting(true);
     try {
-      const { error } = await supabase
-        .from('jobs')
-        .insert({
-          title: formData.title,
-          company: formData.company,
-          location: formData.location,
-          job_type: formData.job_type as any,
-          experience_level: formData.experience_level as any,
-          job_category: formData.job_category as any,
-          applicant_level: formData.applicant_level,
-          salary_min: formData.salary_min ? parseInt(formData.salary_min) : null,
-          salary_max: formData.salary_max ? parseInt(formData.salary_max) : null,
-          description: formData.description,
-          application_deadline: formData.application_deadline || null,
-          required_skills: skills,
-          posted_by: user.id,
-          is_active: true
-        });
+      console.log('Submitting job creation form...');
+      
+      const jobData = {
+        title: formData.title,
+        company: formData.company,
+        location: formData.location,
+        job_type: formData.job_type as any,
+        experience_level: formData.experience_level as any,
+        job_category: formData.job_category as any,
+        applicant_level: formData.applicant_level,
+        salary_min: formData.salary_min ? parseInt(formData.salary_min) : undefined,
+        salary_max: formData.salary_max ? parseInt(formData.salary_max) : undefined,
+        description: formData.description,
+        application_deadline: formData.application_deadline || undefined,
+        required_skills: skills,
+        posted_by: user.id
+      };
 
-      if (error) throw error;
+      console.log('Creating job with data:', jobData);
+      
+      const createdJob = await jobsService.createJob(jobData);
+      
+      console.log('Job created successfully:', createdJob);
 
       toast({
         title: "Success",
         description: "Job created successfully!",
       });
 
-      onJobCreated();
-      onClose();
-      
       // Reset form
       setFormData({
         title: '',
@@ -105,11 +120,14 @@ const JobCreationModal: React.FC<JobCreationModalProps> = ({ isOpen, onClose, on
         application_deadline: ''
       });
       setSkills([]);
-    } catch (error) {
+
+      onJobCreated();
+      onClose();
+    } catch (error: any) {
       console.error('Error creating job:', error);
       toast({
         title: "Error",
-        description: "Failed to create job. Please try again.",
+        description: error.message || "Failed to create job. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -135,6 +153,7 @@ const JobCreationModal: React.FC<JobCreationModalProps> = ({ isOpen, onClose, on
                 id="title"
                 value={formData.title}
                 onChange={(e) => handleInputChange('title', e.target.value)}
+                placeholder="e.g., Software Engineer"
                 required
               />
             </div>
@@ -144,6 +163,7 @@ const JobCreationModal: React.FC<JobCreationModalProps> = ({ isOpen, onClose, on
                 id="company"
                 value={formData.company}
                 onChange={(e) => handleInputChange('company', e.target.value)}
+                placeholder="e.g., TechCorp Inc."
                 required
               />
             </div>
@@ -156,6 +176,7 @@ const JobCreationModal: React.FC<JobCreationModalProps> = ({ isOpen, onClose, on
                 id="location"
                 value={formData.location}
                 onChange={(e) => handleInputChange('location', e.target.value)}
+                placeholder="e.g., San Francisco, CA"
                 required
               />
             </div>
@@ -253,6 +274,7 @@ const JobCreationModal: React.FC<JobCreationModalProps> = ({ isOpen, onClose, on
               rows={4}
               value={formData.description}
               onChange={(e) => handleInputChange('description', e.target.value)}
+              placeholder="Describe the job responsibilities, requirements, and benefits..."
               required
             />
           </div>
@@ -284,7 +306,7 @@ const JobCreationModal: React.FC<JobCreationModalProps> = ({ isOpen, onClose, on
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>

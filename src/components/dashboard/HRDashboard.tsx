@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Building2, Users, TrendingUp, Calendar, LogOut, FileText, Star, Clock, Briefcase, Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { applicationService } from '@/services/applicationService';
+import { jobsService } from '@/services/jobsService';
 import CandidateManagement from './CandidateManagement';
 import CandidateSummary from './CandidateSummary';
 import HRProfileSummary from './HRProfileSummary';
@@ -40,6 +41,7 @@ const HRDashboard = () => {
 
   const loadStats = async () => {
     try {
+      console.log('Loading HR dashboard stats...');
       const applications = await applicationService.getAllApplicationsForHR();
       
       const today = new Date().toDateString();
@@ -66,9 +68,30 @@ const HRDashboard = () => {
         interviewsToday,
         hiredThisMonth
       });
+
+      console.log('Stats loaded successfully:', {
+        totalApplications: applications.length,
+        inProgress,
+        interviewsToday,
+        hiredThisMonth
+      });
     } catch (error) {
       console.error('Error loading stats:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load dashboard statistics",
+        variant: "destructive",
+      });
     }
+  };
+
+  const handleJobCreated = async () => {
+    console.log('Job created, refreshing stats...');
+    await loadStats();
+    toast({
+      title: "Success",
+      description: "Job created successfully and is now visible to job seekers!",
+    });
   };
 
   if (isLoading) {
@@ -265,7 +288,7 @@ const HRDashboard = () => {
       <JobCreationModal
         isOpen={isJobModalOpen}
         onClose={() => setIsJobModalOpen(false)}
-        onJobCreated={loadStats}
+        onJobCreated={handleJobCreated}
       />
     </div>
   );

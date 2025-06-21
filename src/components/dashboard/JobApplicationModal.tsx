@@ -69,10 +69,15 @@ const JobApplicationModal: React.FC<JobApplicationModalProps> = ({
     }
   };
 
+  const handleClose = () => {
+    setCoverLetter('');
+    onClose();
+  };
+
   if (!job) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Apply to {job.title}</DialogTitle>
@@ -86,7 +91,7 @@ const JobApplicationModal: React.FC<JobApplicationModalProps> = ({
             <Label htmlFor="cover-letter">Cover Letter (Optional)</Label>
             <Textarea
               id="cover-letter"
-              placeholder="Tell us why you're interested in this position..."
+              placeholder="Tell us why you're interested in this position and what makes you a great fit..."
               value={coverLetter}
               onChange={(e) => setCoverLetter(e.target.value)}
               rows={4}
@@ -95,7 +100,7 @@ const JobApplicationModal: React.FC<JobApplicationModalProps> = ({
           </div>
           
           <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+            <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
               Cancel
             </Button>
             <Button onClick={handleSubmit} disabled={isSubmitting}>

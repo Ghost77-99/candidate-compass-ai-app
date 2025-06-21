@@ -15,6 +15,7 @@ export interface ApplicationStage {
 export const applicationStageService = {
   async getApplicationStages(applicationId: string): Promise<ApplicationStage[]> {
     try {
+      console.log('Fetching stages for application:', applicationId);
       const { data, error } = await supabase
         .from('application_stages')
         .select('*')
@@ -23,9 +24,10 @@ export const applicationStageService = {
 
       if (error) {
         console.error('Error fetching application stages:', error);
-        throw error;
+        throw new Error(`Failed to fetch stages: ${error.message}`);
       }
 
+      console.log('Stages fetched successfully:', data?.length || 0);
       return (data || []) as ApplicationStage[];
     } catch (error) {
       console.error('Error in getApplicationStages:', error);
@@ -64,7 +66,7 @@ export const applicationStageService = {
 
       if (fetchError && fetchError.code !== 'PGRST116') {
         console.error('Error fetching existing stage:', fetchError);
-        throw fetchError;
+        throw new Error(`Failed to fetch existing stage: ${fetchError.message}`);
       }
 
       let data;
@@ -100,7 +102,7 @@ export const applicationStageService = {
 
       if (error) {
         console.error('Error updating stage status:', error);
-        throw error;
+        throw new Error(`Failed to update stage: ${error.message}`);
       }
 
       // Update current stage in applications table if this stage is completed
@@ -118,6 +120,8 @@ export const applicationStageService = {
 
   async updateApplicationProgress(applicationId: string, completedStageName: string) {
     try {
+      console.log('Updating application progress for:', applicationId, completedStageName);
+      
       const stageOrder = [
         'resume_upload', 'aptitude_test', 'group_discussion',
         'technical_test', 'hr_round', 'personality_test'
@@ -154,7 +158,7 @@ export const applicationStageService = {
 
       if (error) {
         console.error('Error updating application progress:', error);
-        throw error;
+        throw new Error(`Failed to update application progress: ${error.message}`);
       }
 
       console.log('Application progress updated successfully');
@@ -171,6 +175,8 @@ export const applicationStageService = {
     resumeSummary: string
   ): Promise<void> {
     try {
+      console.log('Completing resume stage for application:', applicationId);
+      
       const isPassed = qualificationScore >= 75;
       
       // Update the resume upload stage
@@ -192,7 +198,7 @@ export const applicationStageService = {
 
       if (error) {
         console.error('Error updating application with resume data:', error);
-        throw error;
+        throw new Error(`Failed to update application: ${error.message}`);
       }
 
       console.log('Resume stage completed successfully');
